@@ -3,6 +3,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-d
 import Navbar from './components/Navbar';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/ProfilePage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectFormPage from './pages/ProjectFormPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -24,6 +25,7 @@ function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProjectsPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/projects/new" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
         <Route path="/projects/:id/edit" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
       </Routes>

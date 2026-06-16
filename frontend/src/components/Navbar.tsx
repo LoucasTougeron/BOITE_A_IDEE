@@ -58,6 +58,14 @@ export default function Navbar() {
               <>
                 <div className="fixed inset-0" onClick={() => setDropdownOpen(false)} />
                 <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-1 z-50">
+                  <Link
+                    to="/profile"
+                    onClick={() => setDropdownOpen(false)}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <User size={14} /> Mon Profil
+                  </Link>
+                  <div className="border-t border-gray-100 my-1" />
                   <button
                     onClick={handleSignOut}
                     className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
