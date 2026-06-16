@@ -27,9 +27,20 @@ export default function ProjectDetailPage() {
     queryFn: () => api.get(`/projects/${id}`).then((r) => r.data),
   });
 
+  const { data: hasVoted = false } = useQuery<boolean>({
+    queryKey: ['vote', id, user?.id],
+    queryFn: () => api.get(`/projects/${id}/votes/me`).then((r) => r.data.voted),
+    enabled: !!user,
+  });
+
   const voteMutation = useMutation({
-    mutationFn: () => api.post(`/projects/${id}/votes`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project', id] }),
+    mutationFn: () => hasVoted
+      ? api.delete(`/projects/${id}/votes`)
+      : api.post(`/projects/${id}/votes`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -123,9 +134,13 @@ export default function ProjectDetailPage() {
               <button
                 onClick={() => user ? voteMutation.mutate() : navigate('/login')}
                 disabled={voteMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
+                className={`w-full flex items-center justify-center gap-2 font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50 border ${
+                  hasVoted
+                    ? 'bg-rose-500 hover:bg-rose-600 text-white border-rose-500'
+                    : 'bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-200'
+                }`}
               >
-                <Heart size={16} fill={voteCount > 0 ? 'currentColor' : 'none'} />
+                <Heart size={16} fill={hasVoted ? 'currentColor' : 'none'} />
                 {voteCount} Like{voteCount > 1 ? 's' : ''}
               </button>
               {!user && (

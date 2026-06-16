@@ -1,4 +1,4 @@
-import { ChevronDown, Lightbulb, LogOut, Plus, User } from 'lucide-react';
+import { ChevronDown, Lightbulb, LogOut, Plus, Sparkles, User } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -24,6 +24,9 @@ export default function Navbar() {
         <div className="flex items-center gap-1 text-sm text-gray-500">
           <Link to="/" className="px-3 py-1.5 rounded-md hover:bg-gray-100 hover:text-gray-900 transition-colors">
             Explorer
+          </Link>
+          <Link to="/swipe" className="flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-gray-100 hover:text-gray-900 transition-colors">
+            <Sparkles size={14} /> Tinder
           </Link>
         </div>
       </div>
