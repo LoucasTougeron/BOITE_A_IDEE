@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { type FormEvent, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../lib/api';
+import { supabase } from '../lib/supabase';
 
 const THEMES = ['Tech', 'Design', 'Business', 'Social', 'Science', 'Art'];
 const STATUSES = ['idea', 'in_progress', 'completed'];
@@ -13,8 +14,10 @@ export default function ProjectFormPage() {
 
   const [form, setForm] = useState({
     title: '', description: '', objective: '', theme: THEMES[0],
-    tags: '', link: '', team_name: '', specialty: '', status: STATUSES[0],
+    tags: '', link: '', team_name: '', specialty: '', status: STATUSES[0], file_url: '',
   });
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const { data: existing } = useQuery({
     queryKey: ['project', id],
@@ -34,10 +37,35 @@ export default function ProjectFormPage() {
     onSuccess: (res) => navigate(`/projects/${res.data.id}`),
   });
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
+    let fileUrl = form.file_url;
+
+    if (file) {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project_files')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('Upload error', uploadError);
+        alert('Erreur lors de l\'upload du fichier');
+        setUploading(false);
+        return;
+      }
+
+      const { data } = supabase.storage.from('project_files').getPublicUrl(fileName);
+      fileUrl = data.publicUrl;
+      setUploading(false);
+    }
+
     mutation.mutate({
       ...form,
+      file_url: fileUrl,
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
     });
   }
@@ -119,6 +147,20 @@ export default function ProjectFormPage() {
                   <label className={labelCls}>Lien livrable</label>
                   <input value={form.link} onChange={set('link')} type="url" placeholder="https://..." className={inputCls} />
                 </div>
+                <div>
+                  <label className={labelCls}>Fichier PDF (Optionnel)</label>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition"
+                  />
+                  {form.file_url && !file && (
+                    <p className="mt-2 text-xs text-gray-500">
+                      Un fichier est déjà joint. <a href={form.file_url} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">Voir le fichier</a>
+                    </p>
+                  )}
+                </div>
               </div>
 
               {mutation.isError && (
@@ -129,10 +171,10 @@ export default function ProjectFormPage() {
 
               <button
                 type="submit"
-                disabled={mutation.isPending}
+                disabled={mutation.isPending || uploading}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition-colors disabled:opacity-50 text-sm"
               >
-                {mutation.isPending ? 'Enregistrement...' : isEdit ? 'Enregistrer les modifications' : 'Déposer le projet'}
+                {uploading ? 'Upload du fichier...' : mutation.isPending ? 'Enregistrement...' : isEdit ? 'Enregistrer les modifications' : 'Déposer le projet'}
               </button>
               <button
                 type="button"
