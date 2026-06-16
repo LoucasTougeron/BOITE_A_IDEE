@@ -1,7 +1,7 @@
 -- =====================
--- Profiles (liés à auth.users)
+-- Users (liés à auth.users)
 -- =====================
-create table public.profiles (
+create table public.users (
   id uuid references auth.users(id) on delete cascade primary key,
   first_name text,
   last_name text,
@@ -11,11 +11,11 @@ create table public.profiles (
   created_at timestamptz default now()
 );
 
--- Trigger pour créer automatiquement un profil à l'inscription
+-- Trigger pour créer automatiquement un utilisateur à l'inscription
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email)
+  insert into public.users (id, email)
   values (new.id, new.email);
   return new;
 end;
@@ -39,7 +39,7 @@ create table public.projects (
   team_name text,
   specialty text,
   status text not null default 'idea' check (status in ('idea', 'in_progress', 'completed')),
-  creator_id uuid references public.profiles(id) on delete set null,
+  creator_id uuid references public.users(id) on delete set null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -50,7 +50,7 @@ create table public.projects (
 create table public.votes (
   id uuid default gen_random_uuid() primary key,
   project_id uuid references public.projects(id) on delete cascade not null,
-  user_id uuid references public.profiles(id) on delete cascade not null,
+  user_id uuid references public.users(id) on delete cascade not null,
   created_at timestamptz default now(),
   unique (project_id, user_id)
 );
@@ -72,24 +72,24 @@ create table public.budgets (
 -- =====================
 -- RLS (Row Level Security)
 -- =====================
-alter table public.profiles enable row level security;
+alter table public.users enable row level security;
 alter table public.projects enable row level security;
 alter table public.votes enable row level security;
 alter table public.budgets enable row level security;
 
--- Profiles : lecture publique, modification uniquement par le propriétaire
-create policy "profiles_select" on public.profiles for select using (true);
-create policy "profiles_update" on public.profiles for update using (auth.uid() = id);
+-- Users : lecture publique, modification uniquement par le propriétaire
+create policy "users_select" on public.users for select using (true);
+create policy "users_update" on public.users for update using (auth.uid() = id);
 
 -- Projects : lecture publique, création/modif/suppression pour authentifiés
 create policy "projects_select" on public.projects for select using (true);
 create policy "projects_insert" on public.projects for insert with check (auth.uid() is not null);
 create policy "projects_update" on public.projects for update using (
   auth.uid() = creator_id or
-  exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  exists (select 1 from public.users where id = auth.uid() and role = 'admin')
 );
 create policy "projects_delete" on public.projects for delete using (
-  exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  exists (select 1 from public.users where id = auth.uid() and role = 'admin')
 );
 
 -- Votes : lecture publique, vote uniquement authentifié
@@ -100,5 +100,5 @@ create policy "votes_delete" on public.votes for delete using (auth.uid() = user
 -- Budgets : lecture publique, écriture admin uniquement
 create policy "budgets_select" on public.budgets for select using (true);
 create policy "budgets_insert" on public.budgets for insert with check (
-  exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  exists (select 1 from public.users where id = auth.uid() and role = 'admin')
 );
