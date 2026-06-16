@@ -6,6 +6,7 @@ export interface Project {
   theme: string;
   tags: string[];
   link?: string;
+  file_url?: string;
   team_name?: string;
   specialty?: string;
   status: string;

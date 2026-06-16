@@ -23,6 +23,10 @@ export class CreateProjectDto {
 
   @IsString()
   @IsOptional()
+  file_url: string;
+
+  @IsString()
+  @IsOptional()
   team_name: string;
 
   @IsString()
