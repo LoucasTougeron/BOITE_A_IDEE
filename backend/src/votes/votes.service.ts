@@ -23,6 +23,16 @@ export class VotesService {
     return data;
   }
 
+  async hasVoted(projectId: string, userId: string) {
+    const { data } = await this.supabase.db
+      .from('votes')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    return { voted: !!data };
+  }
+
   async unvote(projectId: string, userId: string) {
     const { error } = await this.supabase.db
       .from('votes')

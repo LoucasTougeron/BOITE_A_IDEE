@@ -1,0 +1,235 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Heart, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import api from '../lib/api';
+import type { Project } from '../types';
+
+const THEME_COLOR: Record<string, string> = {
+  Tech: 'bg-blue-50 text-blue-700',
+  Design: 'bg-pink-50 text-pink-700',
+  Business: 'bg-orange-50 text-orange-700',
+  Social: 'bg-teal-50 text-teal-700',
+  Science: 'bg-purple-50 text-purple-700',
+  Art: 'bg-rose-50 text-rose-700',
+};
+const STATUS_LABEL: Record<string, string> = {
+  idea: 'Idée',
+  in_progress: 'En cours',
+  completed: 'Terminé',
+};
+
+const SWIPE_THRESHOLD = 100;
+
+export default function SwipePage() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const { data: projects = [], isLoading } = useQuery<Project[]>({
+    queryKey: ['projects-swipe'],
+    queryFn: () => api.get('/projects').then((r) => r.data),
+  });
+
+  const [index, setIndex] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [leaving, setLeaving] = useState<'left' | 'right' | null>(null);
+  const startX = useRef(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const current = projects[index];
+  const next = projects[index + 1];
+
+  useEffect(() => {
+    if (leaving) {
+      const t = setTimeout(() => {
+        setLeaving(null);
+        setDragX(0);
+        setIndex((i) => i + 1);
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [leaving]);
+
+  function onPointerDown(e: React.PointerEvent) {
+    if (leaving) return;
+    setDragging(true);
+    startX.current = e.clientX;
+    cardRef.current?.setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    if (!dragging) return;
+    setDragX(e.clientX - startX.current);
+  }
+
+  function onPointerUp() {
+    if (!dragging) return;
+    setDragging(false);
+    if (dragX > SWIPE_THRESHOLD) triggerLike();
+    else if (dragX < -SWIPE_THRESHOLD) triggerPass();
+    else setDragX(0);
+  }
+
+  async function triggerLike() {
+    if (!user) { navigate('/login'); return; }
+    setLeaving('right');
+    try {
+      await api.post(`/projects/${current.id}/votes`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    } catch { /* déjà voté */ }
+  }
+
+  function triggerPass() {
+    setLeaving('left');
+  }
+
+  const rotation = dragX / 15;
+  const opacity = Math.max(0, 1 - Math.abs(dragX) / 400);
+  const likeOpacity = Math.min(1, Math.max(0, dragX / SWIPE_THRESHOLD));
+  const passOpacity = Math.min(1, Math.max(0, -dragX / SWIPE_THRESHOLD));
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-56px)]">
+        <div className="w-80 h-[480px] bg-white rounded-2xl border border-gray-200 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (!current || index >= projects.length) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-4">
+        <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-4xl">🎉</div>
+        <p className="text-xl font-bold text-gray-900">Tu as tout vu !</p>
+        <p className="text-gray-500 text-sm">Plus aucun projet à découvrir pour l'instant.</p>
+        <button
+          onClick={() => setIndex(0)}
+          className="mt-2 px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+        >
+          Recommencer
+        </button>
+      </div>
+    );
+  }
+
+  const themeColor = THEME_COLOR[current.theme] ?? 'bg-gray-100 text-gray-600';
+  const cardStyle = leaving
+    ? {
+        transform: `translateX(${leaving === 'right' ? 500 : -500}px) rotate(${leaving === 'right' ? 20 : -20}deg)`,
+        opacity: 0,
+        transition: 'transform 0.3s ease, opacity 0.3s ease',
+      }
+    : {
+        transform: `translateX(${dragX}px) rotate(${rotation}deg)`,
+        transition: dragging ? 'none' : 'transform 0.3s ease',
+        cursor: dragging ? 'grabbing' : 'grab',
+      };
+
+  return (
+    <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-8 select-none bg-gray-50">
+      <p className="text-sm text-gray-400 font-medium">
+        {index + 1} / {projects.length}
+      </p>
+
+      {/* Stack de cartes */}
+      <div className="relative w-80 h-[480px]">
+        {/* Carte suivante (en dessous) */}
+        {next && (
+          <div className="absolute inset-0 bg-white rounded-2xl border border-gray-200 shadow-md scale-95 translate-y-4" />
+        )}
+
+        {/* Carte courante */}
+        <div
+          ref={cardRef}
+          style={cardStyle}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          className="absolute inset-0 bg-white rounded-2xl border border-gray-200 shadow-xl flex flex-col p-6 overflow-hidden"
+        >
+          {/* Badge LIKE */}
+          <div
+            style={{ opacity: likeOpacity }}
+            className="absolute top-8 left-6 border-4 border-emerald-500 text-emerald-500 font-black text-2xl px-3 py-1 rounded-xl rotate-[-20deg] pointer-events-none"
+          >
+            LIKE
+          </div>
+
+          {/* Badge PASS */}
+          <div
+            style={{ opacity: passOpacity }}
+            className="absolute top-8 right-6 border-4 border-red-400 text-red-400 font-black text-2xl px-3 py-1 rounded-xl rotate-[20deg] pointer-events-none"
+          >
+            PASS
+          </div>
+
+          {/* Contenu */}
+          <div className="flex items-center justify-between mb-4">
+            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${themeColor}`}>
+              {current.theme}
+            </span>
+            <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+              {STATUS_LABEL[current.status] ?? current.status}
+            </span>
+          </div>
+
+          <h2 className="text-xl font-bold text-gray-900 mb-2 leading-snug">
+            {current.title}
+          </h2>
+          <p className="text-gray-500 text-sm leading-relaxed flex-1 line-clamp-5">
+            {current.description}
+          </p>
+
+          {current.objective && (
+            <div className="mt-4 bg-indigo-50 rounded-xl p-3">
+              <p className="text-xs font-semibold text-indigo-700 mb-1">Objectif</p>
+              <p className="text-xs text-indigo-600 line-clamp-3">{current.objective}</p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-1 mt-4">
+            {current.tags?.slice(0, 4).map((tag) => (
+              <span key={tag} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">
+                #{tag}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <Heart size={12} /> {current.votes?.[0]?.count ?? 0} likes
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); navigate(`/projects/${current.id}`); }}
+              className="text-xs text-indigo-600 hover:underline"
+            >
+              Voir le projet →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Boutons */}
+      <div className="flex items-center gap-6">
+        <button
+          onClick={triggerPass}
+          className="w-14 h-14 rounded-full bg-white border-2 border-red-200 text-red-400 hover:border-red-400 hover:bg-red-50 flex items-center justify-center shadow-md transition-all"
+        >
+          <X size={24} />
+        </button>
+        <button
+          onClick={triggerLike}
+          className="w-16 h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg transition-all"
+        >
+          <Heart size={26} />
+        </button>
+      </div>
+
+      <p className="text-xs text-gray-400">Glisse ou utilise les boutons</p>
+    </div>
+  );
+}

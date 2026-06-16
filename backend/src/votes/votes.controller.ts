@@ -11,6 +11,12 @@ export class VotesController {
     return this.votesService.getCount(projectId);
   }
 
+  @Get('me')
+  @UseGuards(AuthGuard)
+  hasVoted(@Param('projectId') projectId: string, @Req() req: any) {
+    return this.votesService.hasVoted(projectId, req.user.id);
+  }
+
   @Post()
   @UseGuards(AuthGuard)
   vote(@Param('projectId') projectId: string, @Req() req: any) {

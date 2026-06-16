@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import SwipeTab from './components/SwipeTab';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/LoginPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectFormPage from './pages/ProjectFormPage';
 import ProjectsPage from './pages/ProjectsPage';
+import SwipePage from './pages/SwipePage';
 
 const queryClient = new QueryClient();
 
@@ -20,9 +22,11 @@ function AppRoutes() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
+      <SwipeTab />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<ProjectsPage />} />
+        <Route path="/swipe" element={<SwipePage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="/projects/new" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
         <Route path="/projects/:id/edit" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
