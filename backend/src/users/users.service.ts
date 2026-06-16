@@ -7,7 +7,7 @@ export class UsersService {
 
   async getProfile(userId: string) {
     const { data, error } = await this.supabase.db
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', userId)
       .single();
@@ -17,7 +17,7 @@ export class UsersService {
 
   async updateProfile(userId: string, updates: Record<string, any>) {
     const { data, error } = await this.supabase.db
-      .from('profiles')
+      .from('users')
       .upsert({ id: userId, ...updates })
       .select()
       .single();

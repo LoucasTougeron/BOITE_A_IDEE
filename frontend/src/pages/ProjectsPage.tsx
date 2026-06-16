@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Filter, LayoutGrid, List, Search, Shuffle, X } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProjectCard from '../components/ProjectCard';
 import api from '../lib/api';
 import type { Project } from '../types';
+import { useAnimateOnMount, useStaggerAnimation } from '../hooks/useAnimations';
 
 const THEMES = ['Tech', 'Design', 'Business', 'Social', 'Science', 'Art'];
 const STATUSES = [
@@ -15,6 +16,12 @@ const STATUSES = [
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const gridRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  useAnimateOnMount(sidebarRef, { type: 'slideRight', duration: 0.5 });
+  useStaggerAnimation(gridRef, '> div', { type: 'fadeUp', stagger: 0.06, delay: 0.2, duration: 0.45 });
+
   const [search, setSearch] = useState('');
   const [theme, setTheme] = useState('');
   const [status, setStatus] = useState('');
@@ -43,36 +50,36 @@ export default function ProjectsPage() {
   const clearFilters = () => { setSearch(''); setTheme(''); setStatus(''); };
 
   return (
-    <div className="flex h-[calc(100vh-56px)]">
+    <div className="flex h-[calc(100vh-56px)] page-enter">
       {/* Sidebar */}
-      <aside className="w-64 shrink-0 border-r border-gray-200 bg-white flex flex-col py-6 px-4 overflow-y-auto">
-        <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4 px-1">
+      <aside ref={sidebarRef} className="w-64 shrink-0 border-r border-[var(--border-light)] bg-[var(--bg-glass)] backdrop-blur-xl flex flex-col py-6 px-4 overflow-y-auto">
+        <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4 px-1">
           <Filter size={12} /> Filtres
         </div>
 
         {/* Search */}
         <div className="relative mb-6">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
             placeholder="Rechercher..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+            className="input-modern pl-9"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
               <X size={13} />
             </button>
           )}
         </div>
 
         {/* Themes */}
-        <p className="text-xs font-semibold text-gray-500 mb-2 px-1">Thématique</p>
+        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2 px-1">Thématique</p>
         <div className="flex flex-col gap-0.5 mb-6">
           <button
             onClick={() => setTheme('')}
-            className={`text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${!theme ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+            className={`text-left text-sm px-3 py-1.5 rounded-lg transition-all ${!theme ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-[var(--accent-2)] font-semibold border border-purple-500/20' : 'text-[var(--text-secondary)] hover:bg-[var(--border-light)]'}`}
           >
             Toutes
           </button>
@@ -80,7 +87,7 @@ export default function ProjectsPage() {
             <button
               key={t}
               onClick={() => setTheme(theme === t ? '' : t)}
-              className={`text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${theme === t ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`text-left text-sm px-3 py-1.5 rounded-lg transition-all ${theme === t ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-[var(--accent-2)] font-semibold border border-purple-500/20' : 'text-[var(--text-secondary)] hover:bg-[var(--border-light)]'}`}
             >
               {t}
             </button>
@@ -88,11 +95,11 @@ export default function ProjectsPage() {
         </div>
 
         {/* Status */}
-        <p className="text-xs font-semibold text-gray-500 mb-2 px-1">Statut</p>
+        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2 px-1">Statut</p>
         <div className="flex flex-col gap-0.5 mb-6">
           <button
             onClick={() => setStatus('')}
-            className={`text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${!status ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+            className={`text-left text-sm px-3 py-1.5 rounded-lg transition-all ${!status ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-[var(--accent-2)] font-semibold border border-purple-500/20' : 'text-[var(--text-secondary)] hover:bg-[var(--border-light)]'}`}
           >
             Tous
           </button>
@@ -100,7 +107,7 @@ export default function ProjectsPage() {
             <button
               key={s.value}
               onClick={() => setStatus(status === s.value ? '' : s.value)}
-              className={`text-left text-sm px-3 py-1.5 rounded-lg transition-colors ${status === s.value ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
+              className={`text-left text-sm px-3 py-1.5 rounded-lg transition-all ${status === s.value ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-[var(--accent-2)] font-semibold border border-purple-500/20' : 'text-[var(--text-secondary)] hover:bg-[var(--border-light)]'}`}
             >
               {s.label}
             </button>
@@ -108,22 +115,22 @@ export default function ProjectsPage() {
         </div>
 
         {hasFilters && (
-          <button onClick={clearFilters} className="mt-auto flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 px-1 transition-colors">
+          <button onClick={clearFilters} className="mt-auto flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] px-1 transition-colors">
             <X size={12} /> Effacer les filtres
           </button>
         )}
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto bg-gray-50">
+      <main className="flex-1 overflow-y-auto">
         <div className="px-8 py-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-xl font-bold text-gray-900">
+              <h1 className="text-xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
                 {theme || 'Tous les projets'}
               </h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-sm text-[var(--text-muted)] mt-0.5">
                 {isLoading ? '...' : `${projects.length} projet${projects.length > 1 ? 's' : ''}`}
                 {hasFilters && ' · filtré'}
               </p>
@@ -131,15 +138,15 @@ export default function ProjectsPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRandom}
-                className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-200 bg-white px-3.5 py-2 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                className="btn-ghost flex items-center gap-1.5 text-sm"
               >
                 <Shuffle size={14} /> Aléatoire
               </button>
-              <div className="flex border border-gray-200 rounded-lg overflow-hidden bg-white">
-                <button onClick={() => setView('grid')} className={`px-2.5 py-2 transition-colors ${view === 'grid' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>
+              <div className="flex border border-[var(--border-light)] rounded-xl overflow-hidden bg-[var(--bg-glass)]">
+                <button onClick={() => setView('grid')} className={`px-2.5 py-2 transition-colors ${view === 'grid' ? 'text-[var(--accent-2)] bg-[var(--border-light)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}>
                   <LayoutGrid size={15} />
                 </button>
-                <button onClick={() => setView('list')} className={`px-2.5 py-2 transition-colors ${view === 'list' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>
+                <button onClick={() => setView('list')} className={`px-2.5 py-2 transition-colors ${view === 'list' ? 'text-[var(--accent-2)] bg-[var(--border-light)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}>
                   <List size={15} />
                 </button>
               </div>
@@ -150,43 +157,43 @@ export default function ProjectsPage() {
           {isLoading ? (
             <div className="grid grid-cols-3 gap-4">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-gray-200 h-44 animate-pulse" />
+                <div key={i} className="glass-card h-44 shimmer" />
               ))}
             </div>
           ) : projects.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                <Search size={24} className="text-gray-400" />
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 flex items-center justify-center mb-4 border border-purple-500/10">
+                <Search size={24} className="text-[var(--text-muted)]" />
               </div>
-              <p className="font-semibold text-gray-700 mb-1">Aucun projet trouvé</p>
-              <p className="text-sm text-gray-400">Essayez d'autres filtres ou déposez le premier !</p>
+              <p className="font-semibold text-[var(--text-primary)] mb-1">Aucun projet trouvé</p>
+              <p className="text-sm text-[var(--text-muted)]">Essayez d'autres filtres ou déposez le premier !</p>
               {hasFilters && (
-                <button onClick={clearFilters} className="mt-4 text-sm text-indigo-600 hover:underline">
+                <button onClick={clearFilters} className="mt-4 text-sm font-semibold gradient-text hover:opacity-80 transition-opacity">
                   Effacer les filtres
                 </button>
               )}
             </div>
           ) : view === 'grid' ? (
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+            <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {projects.map((p) => <ProjectCard key={p.id} project={p} />)}
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div ref={gridRef} className="flex flex-col gap-2">
               {projects.map((p) => (
                 <div
                   key={p.id}
                   onClick={() => navigate(`/projects/${p.id}`)}
-                  className="bg-white border border-gray-200 rounded-xl px-5 py-4 flex items-center gap-4 cursor-pointer hover:border-indigo-300 hover:shadow-sm transition-all group"
+                  className="glass-card px-5 py-4 flex items-center gap-4 cursor-pointer group"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-medium text-gray-900 group-hover:text-indigo-700 truncate transition-colors">{p.title}</span>
+                      <span className="font-semibold text-[var(--text-primary)] group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-pink-600 transition-all truncate">{p.title}</span>
                     </div>
-                    <p className="text-sm text-gray-400 truncate">{p.description}</p>
+                    <p className="text-sm text-[var(--text-muted)] truncate">{p.description}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-md">{p.theme}</span>
-                    <span className="text-xs text-gray-400">{p.votes?.[0]?.count ?? 0} ♥</span>
+                    <span className={`theme-badge theme-badge-${p.theme.toLowerCase()}`}>{p.theme}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{p.votes?.[0]?.count ?? 0} ♥</span>
                   </div>
                 </div>
               ))}

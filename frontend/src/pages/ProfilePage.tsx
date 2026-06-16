@@ -75,19 +75,27 @@ export default function ProfilePage() {
   }
 
   if (authLoading || loading) {
-    return <div className="p-8 text-center text-gray-500">Chargement...</div>;
+    return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Mon Profil</h1>
+    <div className="max-w-2xl mx-auto px-4 py-8 page-enter">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
+          {user?.email?.[0].toUpperCase()}
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>Mon Profil</h1>
+          <p className="text-sm text-[var(--text-muted)]">{user?.email}</p>
+        </div>
+      </div>
 
       {message && (
         <div
-          className={`mb-6 p-4 rounded-lg text-sm border ${
+          className={`mb-6 p-4 rounded-xl text-sm border backdrop-blur-sm ${
             message.type === 'success'
-              ? 'bg-green-50 text-green-700 border-green-200'
-              : 'bg-red-50 text-red-700 border-red-200'
+              ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50'
+              : 'bg-red-50/80 text-red-700 border-red-200/50'
           }`}
         >
           {message.text}
@@ -95,51 +103,51 @@ export default function ProfilePage() {
       )}
 
       {/* Profile Information */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Informations personnelles</h2>
+      <div className="glass-card-static p-6 mb-6">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Informations personnelles</h2>
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Prénom</label>
               <input
                 type="text"
                 value={profile?.first_name || ''}
                 onChange={(e) => setProfile((prev) => (prev ? { ...prev, first_name: e.target.value } : prev))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="input-modern"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Nom</label>
               <input
                 type="text"
                 value={profile?.last_name || ''}
                 onChange={(e) => setProfile((prev) => (prev ? { ...prev, last_name: e.target.value } : prev))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="input-modern"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Email</label>
             <input
               type="email"
               value={profile?.email || ''}
               disabled
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-500"
+              className="input-modern"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Spécialité</label>
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Spécialité</label>
             <input
               type="text"
               value={profile?.specialty || ''}
               onChange={(e) => setProfile((prev) => (prev ? { ...prev, specialty: e.target.value } : prev))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="input-modern"
             />
           </div>
           <button
             type="submit"
             disabled={saving}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            className="btn-accent"
           >
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </button>
@@ -147,28 +155,28 @@ export default function ProfilePage() {
       </div>
 
       {/* Change Password */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Modifier le mot de passe</h2>
+      <div className="glass-card-static p-6">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Modifier le mot de passe</h2>
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Nouveau mot de passe</label>
             <input
               type="password"
               value={passwordForm.newPassword}
               onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="input-modern"
               required
               minLength={6}
               placeholder="Au moins 6 caractères"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirmer le mot de passe</label>
+            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Confirmer le mot de passe</label>
             <input
               type="password"
               value={passwordForm.confirmPassword}
               onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="input-modern"
               required
               minLength={6}
               placeholder="Retaper le mot de passe"
@@ -177,7 +185,8 @@ export default function ProfilePage() {
           <button
             type="submit"
             disabled={passwordLoading}
-            className="bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+            className="btn-accent"
+            style={{ background: 'linear-gradient(135deg, #1a0a3e, #2d1b69)' }}
           >
             {passwordLoading ? 'Modification...' : 'Changer le mot de passe'}
           </button>
