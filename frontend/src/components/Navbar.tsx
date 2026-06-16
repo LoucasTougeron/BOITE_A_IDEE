@@ -35,6 +35,12 @@ export default function Navbar() {
           >
             Explorer
           </Link>
+          <Link
+            to="/swipe"
+            className="px-3 py-1.5 rounded-lg hover:bg-[var(--border-light)] hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-purple-600 hover:to-pink-600 font-medium transition-all flex items-center gap-1.5"
+          >
+            🔥 Tinder Mode
+          </Link>
         </div>
       </div>
 

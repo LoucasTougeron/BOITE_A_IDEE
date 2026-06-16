@@ -213,19 +213,18 @@ export default function SwipePage() {
         </div>
       </div>
 
-      {/* Boutons */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-8 mt-4">
         <button
           onClick={triggerPass}
-          className="w-14 h-14 rounded-full bg-white border-2 border-red-200 text-red-400 hover:border-red-400 hover:bg-red-50 flex items-center justify-center shadow-md transition-all"
+          className="w-20 h-20 rounded-full glass-card border-2 border-red-500/20 text-red-500 hover:bg-red-500/10 flex items-center justify-center shadow-lg hover:scale-105 transition-all"
         >
-          <X size={24} />
+          <X size={36} strokeWidth={3} />
         </button>
         <button
           onClick={triggerLike}
-          className="w-16 h-16 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center shadow-lg transition-all"
+          className="w-24 h-24 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white hover:scale-105 flex items-center justify-center shadow-xl shadow-pink-500/25 transition-all"
         >
-          <Heart size={26} />
+          <Heart size={44} strokeWidth={2.5} fill="currentColor" />
         </button>
       </div>
 

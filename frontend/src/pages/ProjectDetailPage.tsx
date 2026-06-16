@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, ExternalLink, Heart, Pencil, Tag, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users } from 'lucide-react';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -123,6 +123,40 @@ export default function ProjectDetailPage() {
                       <Tag size={10} /> {tag}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {project.file_url && (
+                <div className="mt-8 pt-6 border-t border-[var(--border-light)]">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
+                      <FileText size={14} /> Document Joint
+                    </h2>
+                    <div className="flex items-center gap-4">
+                      <a 
+                        href={`${project.file_url}?download=true`} 
+                        download
+                        className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-80 transition-opacity flex items-center gap-1"
+                      >
+                        <Download size={14} className="text-purple-600" /> Télécharger
+                      </a>
+                      <a 
+                        href={project.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1"
+                      >
+                        <ExternalLink size={14} /> Nouvel onglet
+                      </a>
+                    </div>
+                  </div>
+                  <div className="w-full h-[600px] rounded-xl overflow-hidden border border-[var(--border-light)] bg-white/50">
+                    <iframe 
+                      src={`${project.file_url}#toolbar=0`} 
+                      className="w-full h-full" 
+                      title="Document PDF du projet" 
+                    />
+                  </div>
                 </div>
               )}
             </div>
