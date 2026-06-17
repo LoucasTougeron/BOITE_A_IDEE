@@ -3,9 +3,10 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { VotesController } from './votes.controller';
 import { AllVotesController } from './all-votes.controller';
 import { VotesService } from './votes.service';
+import { RewardsModule } from '../rewards/rewards.module';
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [SupabaseModule, RewardsModule],
   controllers: [VotesController, AllVotesController],
   providers: [VotesService],
 })
