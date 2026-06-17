@@ -48,9 +48,8 @@ export class ProjectsController {
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('admin')
-  remove(@Param('id') id: string) {
-    return this.projectsService.remove(id);
+  @UseGuards(AuthGuard)
+  remove(@Param('id') id: string, @Req() req: any) {
+    return this.projectsService.remove(id, req.user);
   }
 }

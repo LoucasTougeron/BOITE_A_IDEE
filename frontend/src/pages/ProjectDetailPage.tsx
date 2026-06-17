@@ -133,27 +133,27 @@ export default function ProjectDetailPage() {
                       <FileText size={14} /> Document Joint
                     </h2>
                     <div className="flex items-center gap-4">
-                      <a 
-                        href="#" 
+                      <a
+                        href="#"
                         onClick={async (e) => {
                           e.preventDefault();
                           try {
                             const urlParts = project.file_url.split('/');
                             const rawFileName = urlParts[urlParts.length - 1].split('?')[0];
-                            
+
                             let displayFileName = `${project.title || 'document'}.pdf`;
                             if (rawFileName.includes('-')) {
                               const parts = rawFileName.split('-');
                               parts.shift();
                               displayFileName = parts.join('-');
                             }
-                            
+
                             const { supabase } = await import('../lib/supabase');
                             const { data: blob, error } = await supabase.storage.from('project_files').download(rawFileName);
-                            
+
                             if (error) throw error;
                             if (!blob) throw new Error("No blob returned");
-                            
+
                             const url = window.URL.createObjectURL(blob);
                             const a = document.createElement('a');
                             a.href = url;
@@ -200,11 +200,10 @@ export default function ProjectDetailPage() {
               <button
                 onClick={() => user ? voteMutation.mutate() : navigate('/login')}
                 disabled={voteMutation.isPending}
-                className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all disabled:opacity-50 ${
-                  hasVoted
+                className={`w-full flex items-center justify-center gap-2 font-semibold py-3 rounded-xl transition-all disabled:opacity-50 ${hasVoted
                     ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/25 pulse-ring-active'
                     : 'bg-gradient-to-r from-pink-500/10 to-rose-500/10 text-pink-600 border border-pink-500/20 hover:from-pink-500/20 hover:to-rose-500/20'
-                }`}
+                  }`}
               >
                 <Heart size={16} fill={hasVoted ? 'currentColor' : 'none'} />
                 {voteCount} Like{voteCount > 1 ? 's' : ''}
@@ -250,15 +249,13 @@ export default function ProjectDetailPage() {
                 >
                   <Pencil size={13} /> Modifier
                 </button>
-                {isAdmin && (
-                  <button
-                    onClick={() => { if (confirm('Supprimer ce projet ?')) deleteMutation.mutate(); }}
-                    disabled={deleteMutation.isPending}
-                    className="w-full flex items-center justify-center gap-2 text-sm text-red-500 border border-red-500/20 py-3 rounded-xl hover:bg-red-50/80 transition-all disabled:opacity-50"
-                  >
-                    <Trash2 size={13} /> Supprimer
-                  </button>
-                )}
+                <button
+                  onClick={() => { if (confirm('Supprimer ce projet ?')) deleteMutation.mutate(); }}
+                  disabled={deleteMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 text-sm text-red-500 border border-red-500/20 py-2 rounded-xl hover:bg-red-50/80 transition-all disabled:opacity-50"
+                >
+                  <Trash2 size={13} /> Supprimer
+                </button>
               </div>
             )}
           </div>

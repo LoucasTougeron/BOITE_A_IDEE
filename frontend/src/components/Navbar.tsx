@@ -34,7 +34,7 @@ export default function Navbar() {
             to="/"
             className="px-3 py-1.5 rounded-lg hover:bg-[var(--border-light)] hover:text-[var(--text-primary)] transition-colors"
           >
-            Explorer
+            🌍 Explorer
           </Link>
           <Link
             to="/swipe"

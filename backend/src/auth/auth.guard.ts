@@ -24,7 +24,17 @@ export class AuthGuard implements CanActivate {
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) throw new UnauthorizedException();
 
-    request.user = data.user;
+    // Fetch the public.users profile to get the real role
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    request.user = {
+      ...data.user,
+      role: profile?.role || 'user',
+    };
     return true;
   }
 
