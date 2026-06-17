@@ -13,6 +13,7 @@ export interface Project {
   creator_id: string;
   created_at: string;
   votes?: { count: number }[];
+  dislikes?: { count: number }[];
 }
 
 export interface Team {
@@ -28,6 +29,7 @@ export interface Profile {
   email: string;
   role: 'admin' | 'user';
   specialty?: string;
+  promo?: string;
   team_id?: string;
   teams?: { name: string };
 }

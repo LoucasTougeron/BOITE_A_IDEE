@@ -75,8 +75,13 @@ export default function SwipePage() {
     } catch { /* déjà voté */ }
   }
 
-  function triggerPass() {
+  async function triggerPass() {
+    if (!user) { navigate('/login'); return; }
     setLeaving('left');
+    try {
+      await api.post(`/projects/${current.id}/dislikes`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    } catch { /* déjà disliké */ }
   }
 
   const rotation = dragX / 15;
