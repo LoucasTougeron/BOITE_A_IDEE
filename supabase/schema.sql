@@ -82,6 +82,28 @@ create table public.budgets (
 );
 
 -- =====================
+-- User Top Projects (Top 3)
+-- =====================
+create table public.user_top_projects (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  project_id uuid references public.projects(id) on delete cascade not null,
+  rank integer not null check (rank between 1 and 3),
+  locked boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique (user_id, project_id),
+  unique (user_id, rank)
+);
+
+alter table public.user_top_projects enable row level security;
+
+create policy "user_top_projects_select" on public.user_top_projects for select using (true);
+create policy "user_top_projects_insert" on public.user_top_projects for insert with check (auth.uid() = user_id);
+create policy "user_top_projects_update" on public.user_top_projects for update using (auth.uid() = user_id);
+create policy "user_top_projects_delete" on public.user_top_projects for delete using (auth.uid() = user_id);
+
+-- =====================
 -- RLS (Row Level Security)
 -- =====================
 alter table public.teams enable row level security;

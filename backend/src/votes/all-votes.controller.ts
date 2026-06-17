@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
 import { VotesService } from './votes.service';
 
@@ -10,5 +10,10 @@ export class AllVotesController {
   @Get()
   getAllDetailedVotes() {
     return this.votesService.getAllDetailedVotes();
+  }
+
+  @Get('my')
+  getMyVotes(@Req() req: any) {
+    return this.votesService.getMyVotes(req.user.id);
   }
 }

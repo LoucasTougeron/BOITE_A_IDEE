@@ -69,12 +69,19 @@ export class ProjectsService {
 
   async update(id: string, dto: Partial<CreateProjectDto>, user: any) {
     const project = await this.findOne(id);
-    const isAdmin = user.user_metadata?.role === 'admin';
+    const isAdmin = user?.role === 'admin';
     if (project.creator_id !== user.id && !isAdmin) throw new ForbiddenException();
+
+    const updatePayload: any = { ...dto };
+    delete updatePayload.id;
+    delete updatePayload.creator_id;
+    delete updatePayload.created_at;
+    delete updatePayload.updated_at;
+    delete updatePayload.votes;
 
     const { data, error } = await this.supabase.db
       .from('projects')
-      .update(dto)
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single();

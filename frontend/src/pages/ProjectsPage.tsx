@@ -26,6 +26,7 @@ export default function ProjectsPage() {
   const [theme, setTheme] = useState('');
   const [status, setStatus] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const params: Record<string, string> = {};
   if (search) params.search = search;
@@ -50,11 +51,22 @@ export default function ProjectsPage() {
   const clearFilters = () => { setSearch(''); setTheme(''); setStatus(''); };
 
   return (
-    <div className="flex h-[calc(100vh-56px)] page-enter">
+    <div className="flex h-[calc(100vh-56px)] page-enter relative">
       {/* Sidebar */}
-      <aside ref={sidebarRef} className="w-64 shrink-0 border-r border-[var(--border-light)] bg-[var(--bg-glass)] backdrop-blur-xl flex flex-col py-6 px-4 overflow-y-auto">
-        <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-4 px-1">
-          <Filter size={12} /> Filtres
+      {filtersOpen && (
+        <div className="fixed inset-0 top-14 z-30 bg-black/30 lg:hidden" onClick={() => setFiltersOpen(false)} />
+      )}
+      <aside
+        ref={sidebarRef}
+        className={`fixed lg:static top-14 lg:top-auto bottom-0 lg:bottom-auto left-0 z-40 w-72 lg:w-64 shrink-0 border-r border-[var(--border-light)] bg-[var(--bg-glass-heavy)] lg:bg-[var(--bg-glass)] backdrop-blur-xl flex flex-col py-6 px-4 overflow-y-auto shadow-2xl lg:shadow-none transition-transform duration-300 ${filtersOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      >
+        <div className="flex items-center justify-between mb-4 px-1">
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
+            <Filter size={12} /> Filtres
+          </div>
+          <button onClick={() => setFiltersOpen(false)} className="lg:hidden text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            <X size={16} />
+          </button>
         </div>
 
         {/* Search */}
@@ -122,18 +134,27 @@ export default function ProjectsPage() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="px-8 py-6">
+      <main className="flex-1 overflow-y-auto w-full">
+        <div className="px-4 sm:px-8 py-6">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
-                {theme || 'Tous les projets'}
-              </h1>
-              <p className="text-sm text-[var(--text-muted)] mt-0.5">
-                {isLoading ? '...' : `${projects.length} projet${projects.length > 1 ? 's' : ''}`}
-                {hasFilters && ' · filtré'}
-              </p>
+          <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                onClick={() => setFiltersOpen(true)}
+                className="lg:hidden shrink-0 flex items-center justify-center w-9 h-9 rounded-xl border border-[var(--border-light)] text-[var(--text-secondary)] hover:bg-[var(--border-light)] transition-colors"
+                aria-label="Ouvrir les filtres"
+              >
+                <Filter size={15} />
+              </button>
+              <div className="min-w-0">
+                <h1 className="text-xl font-bold text-[var(--text-primary)] truncate" style={{ fontFamily: 'var(--font-display)' }}>
+                  {theme || 'Tous les projets'}
+                </h1>
+                <p className="text-sm text-[var(--text-muted)] mt-0.5">
+                  {isLoading ? '...' : `${projects.length} projet${projects.length > 1 ? 's' : ''}`}
+                  {hasFilters && ' · filtré'}
+                </p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -155,7 +176,7 @@ export default function ProjectsPage() {
 
           {/* Cards */}
           {isLoading ? (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="glass-card h-44 shimmer" />
               ))}
