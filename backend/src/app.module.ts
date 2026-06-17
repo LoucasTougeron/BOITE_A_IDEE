@@ -6,6 +6,8 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { UsersModule } from './users/users.module';
 import { VotesModule } from './votes/votes.module';
 
+import { TeamsModule } from './teams/teams.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -14,6 +16,7 @@ import { VotesModule } from './votes/votes.module';
     VotesModule,
     UsersModule,
     BudgetModule,
+    TeamsModule,
   ],
 })
 export class AppModule {}

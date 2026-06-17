@@ -1,9 +1,10 @@
-import { ChevronDown, Lightbulb, LogOut, Menu, Plus, User, X } from 'lucide-react';
+import { ChevronDown, Lightbulb, LogOut, Plus, User, LayoutDashboard } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
 import { useAnimateOnMount } from '../hooks/useAnimations';
+import DashboardPage from '../pages/DashboardPage';
 
 export default function Navbar() {
   const { user, isAdmin, signOut } = useAuth();
@@ -108,6 +109,15 @@ export default function Navbar() {
                   className="px-3 py-2.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--border-light)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-2">
                   <User size={15} /> Mon Profil
                 </Link>
+                {isAdmin && (
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setMobileOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)] rounded-lg transition-colors"
+                  >
+                    <LogOut size={14} className="opacity-0 w-0" /> Dashboard Pédagogie
+                  </Link>
+                )}
                 <button onClick={handleSignOut}
                   className="px-3 py-2.5 rounded-lg text-sm text-red-500 hover:bg-red-50/80 transition-colors flex items-center gap-2 text-left">
                   <LogOut size={15} /> Se déconnecter
@@ -117,12 +127,21 @@ export default function Navbar() {
           </div>
 
           {/* Desktop (≥ md) : dropdown flottant, aligné à droite sous l'icône */}
-          <div className="hidden md:flex absolute top-full right-4 sm:right-6 mt-2 z-50 w-44 flex-col gap-0.5 rounded-xl border border-[var(--border-medium)] p-1.5 shadow-elevated"
+          <div className="hidden md:flex absolute top-full right-4 sm:right-6 mt-2 z-50 w-55 flex-col gap-0.5 rounded-xl border border-[var(--border-medium)] p-1.5 shadow-elevated"
             style={{ background: 'var(--bg-primary)' }}>
             <Link to="/profile" onClick={() => setMobileOpen(false)}
               className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)] rounded-lg transition-colors">
               <User size={14} /> Mon Profil
             </Link>
+            {isAdmin && (
+                  <Link
+                    to="/dashboard"
+                    onClick={() => setMobileOpen(false)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)] rounded-lg transition-colors"
+                  >
+                    <LayoutDashboard size={14} /> Dashboard Pédagogie
+                  </Link>
+                )}
             <div className="h-px bg-[var(--border-light)] my-0.5" />
             <button onClick={handleSignOut}
               className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 hover:bg-red-50/50 rounded-lg transition-colors w-full text-left">

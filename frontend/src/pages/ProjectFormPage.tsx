@@ -45,8 +45,10 @@ export default function ProjectFormPage() {
 
     if (file) {
       setUploading(true);
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      const safeName = originalName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `${Date.now()}-${safeName}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('project_files')

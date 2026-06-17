@@ -6,14 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import type { Project } from '../types';
 
-const THEME_COLOR: Record<string, string> = {
-  Tech: 'bg-blue-50 text-blue-700',
-  Design: 'bg-pink-50 text-pink-700',
-  Business: 'bg-orange-50 text-orange-700',
-  Social: 'bg-teal-50 text-teal-700',
-  Science: 'bg-purple-50 text-purple-700',
-  Art: 'bg-rose-50 text-rose-700',
-};
+
 const STATUS_LABEL: Record<string, string> = {
   idea: 'Idée',
   in_progress: 'En cours',
@@ -102,9 +95,9 @@ export default function SwipePage() {
   if (!current || index >= projects.length) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-4">
-        <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-4xl">🎉</div>
-        <p className="text-xl font-bold text-gray-900">Tu as tout vu !</p>
-        <p className="text-gray-500 text-sm">Plus aucun projet à découvrir pour l'instant.</p>
+        <div className="w-20 h-20 bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-full flex items-center justify-center text-4xl">🎉</div>
+        <p className="text-xl font-bold text-[var(--text-primary)]">Tu as tout vu !</p>
+        <p className="text-[var(--text-secondary)] text-sm">Plus aucun projet à découvrir pour l'instant.</p>
         <button
           onClick={() => setIndex(0)}
           className="mt-2 px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
@@ -115,7 +108,6 @@ export default function SwipePage() {
     );
   }
 
-  const themeColor = THEME_COLOR[current.theme] ?? 'bg-gray-100 text-gray-600';
   const cardStyle = leaving
     ? {
         transform: `translateX(${leaving === 'right' ? 500 : -500}px) rotate(${leaving === 'right' ? 20 : -20}deg)`,
@@ -129,16 +121,12 @@ export default function SwipePage() {
       };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-8 select-none bg-gray-50">
-      <p className="text-sm text-gray-400 font-medium">
-        {index + 1} / {projects.length}
-      </p>
-
+    <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-8 select-none page-enter">
       {/* Stack de cartes */}
       <div className="relative w-80 h-[480px]">
         {/* Carte suivante (en dessous) */}
         {next && (
-          <div className="absolute inset-0 bg-white rounded-2xl border border-gray-200 shadow-md scale-95 translate-y-4" />
+          <div className="absolute inset-0 glass-card-static rounded-2xl shadow-md scale-95 translate-y-4" />
         )}
 
         {/* Carte courante */}
@@ -149,7 +137,7 @@ export default function SwipePage() {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          className="absolute inset-0 bg-white rounded-2xl border border-gray-200 shadow-xl flex flex-col p-6 overflow-hidden"
+          className="absolute inset-0 glass-card-static rounded-2xl shadow-xl flex flex-col p-6 overflow-hidden"
         >
           {/* Badge LIKE */}
           <div
@@ -169,43 +157,43 @@ export default function SwipePage() {
 
           {/* Contenu */}
           <div className="flex items-center justify-between mb-4">
-            <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${themeColor}`}>
+            <span className={`theme-badge theme-badge-${current.theme.toLowerCase()}`}>
               {current.theme}
             </span>
-            <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
+            <span className={`badge badge-${current.status}`}>
               {STATUS_LABEL[current.status] ?? current.status}
             </span>
           </div>
 
-          <h2 className="text-xl font-bold text-gray-900 mb-2 leading-snug">
+          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2 leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
             {current.title}
           </h2>
-          <p className="text-gray-500 text-sm leading-relaxed flex-1 line-clamp-5">
+          <p className="text-[var(--text-secondary)] text-sm leading-relaxed flex-1 line-clamp-5">
             {current.description}
           </p>
 
           {current.objective && (
-            <div className="mt-4 bg-indigo-50 rounded-xl p-3">
-              <p className="text-xs font-semibold text-indigo-700 mb-1">Objectif</p>
-              <p className="text-xs text-indigo-600 line-clamp-3">{current.objective}</p>
+            <div className="mt-4 bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-xl p-3">
+              <p className="text-xs font-semibold text-[var(--text-primary)] mb-1">Objectif</p>
+              <p className="text-xs text-[var(--text-secondary)] line-clamp-3">{current.objective}</p>
             </div>
           )}
 
           <div className="flex flex-wrap gap-1 mt-4">
             {current.tags?.slice(0, 4).map((tag) => (
-              <span key={tag} className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md">
+              <span key={tag} className="tag-pill">
                 #{tag}
               </span>
             ))}
           </div>
 
-          <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-            <span className="text-xs text-gray-400 flex items-center gap-1">
+          <div className="mt-4 pt-3 border-t border-[var(--border-light)] flex items-center justify-between">
+            <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
               <Heart size={12} /> {current.votes?.[0]?.count ?? 0} likes
             </span>
             <button
               onClick={(e) => { e.stopPropagation(); navigate(`/projects/${current.id}`); }}
-              className="text-xs text-indigo-600 hover:underline"
+              className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-80 transition-opacity"
             >
               Voir le projet →
             </button>
@@ -228,7 +216,7 @@ export default function SwipePage() {
         </button>
       </div>
 
-      <p className="text-xs text-gray-400">Glisse ou utilise les boutons</p>
+      <p className="text-xs text-[var(--text-muted)]">Glisse ou utilise les boutons</p>
     </div>
   );
 }
