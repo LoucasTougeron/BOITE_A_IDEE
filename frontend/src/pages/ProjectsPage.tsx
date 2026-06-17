@@ -3,9 +3,9 @@ import { Filter, LayoutGrid, List, Search, Shuffle, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProjectCard from '../components/ProjectCard';
-import api from '../lib/api';
-import type { Project } from '../types';
 import { useAnimateOnMount, useStaggerAnimation } from '../hooks/useAnimations';
+import { projectService } from '../services/project.service';
+import type { Project } from '../types';
 
 const THEMES = ['Tech', 'Design', 'Business', 'Social', 'Science', 'Art'];
 const STATUSES = [
@@ -28,22 +28,23 @@ export default function ProjectsPage() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const params: Record<string, string> = {};
-  if (search) params.search = search;
-  if (theme) params.theme = theme;
-  if (status) params.status = status;
+  const filters = {
+    ...(search && { search }),
+    ...(theme && { theme }),
+    ...(status && { status }),
+  };
 
   const { data: projects = [], isLoading } = useQuery<Project[]>({
-    queryKey: ['projects', params],
-    queryFn: () => api.get('/projects', { params }).then((r) => r.data),
+    queryKey: ['projects', filters],
+    queryFn: () => projectService.getAll(filters),
   });
 
   async function handleRandom() {
     try {
-      const { data } = await api.get('/projects/random');
-      navigate(`/projects/${data.id}`);
+      const project = await projectService.getRandom();
+      navigate(`/projects/${project.id}`);
     } catch {
-      // no projects
+      // no projects available
     }
   }
 
@@ -52,7 +53,6 @@ export default function ProjectsPage() {
 
   return (
     <div className="flex h-[calc(100vh-56px)] page-enter relative">
-      {/* Sidebar */}
       {filtersOpen && (
         <div className="fixed inset-0 top-14 z-30 bg-black/30 lg:hidden" onClick={() => setFiltersOpen(false)} />
       )}
@@ -69,7 +69,6 @@ export default function ProjectsPage() {
           </button>
         </div>
 
-        {/* Search */}
         <div className="relative mb-6">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
@@ -86,7 +85,6 @@ export default function ProjectsPage() {
           )}
         </div>
 
-        {/* Themes */}
         <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2 px-1">Thématique</p>
         <div className="flex flex-col gap-0.5 mb-6">
           <button
@@ -106,7 +104,6 @@ export default function ProjectsPage() {
           ))}
         </div>
 
-        {/* Status */}
         <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2 px-1">Statut</p>
         <div className="flex flex-col gap-0.5 mb-6">
           <button
@@ -133,10 +130,8 @@ export default function ProjectsPage() {
         )}
       </aside>
 
-      {/* Main */}
       <main className="flex-1 overflow-y-auto w-full">
         <div className="px-4 sm:px-8 py-6">
-          {/* Header */}
           <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
               <button
@@ -157,10 +152,7 @@ export default function ProjectsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleRandom}
-                className="btn-ghost flex items-center gap-1.5 text-sm"
-              >
+              <button onClick={handleRandom} className="btn-ghost flex items-center gap-1.5 text-sm">
                 <Shuffle size={14} /> Aléatoire
               </button>
               <div className="flex border border-[var(--border-light)] rounded-xl overflow-hidden bg-[var(--bg-glass)]">
@@ -174,7 +166,6 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          {/* Cards */}
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {[...Array(6)].map((_, i) => (

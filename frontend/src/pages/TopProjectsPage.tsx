@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import AlertMessage from '../components/ui/AlertMessage';
 import { useAuth } from '../hooks/useAuth';
-import api from '../lib/api';
+import { topProjectService } from '../services/topProject.service';
+import { voteService } from '../services/vote.service';
 import type { Project, UserTopProject } from '../types';
 
 const RANK_LABELS: Record<number, { label: string; emoji: string }> = {
@@ -21,24 +22,14 @@ export default function TopProjectsPage() {
 
   const { data: likedProjects = [], isLoading: loadingLiked } = useQuery<Project[]>({
     queryKey: ['my-liked-projects'],
-    queryFn: async () => {
-      try {
-        const res = await api.get('/votes/my');
-        const votes = res.data;
-        if (!Array.isArray(votes) || votes.length === 0) return [];
-        return votes.map((v: any) => v.projects).filter(Boolean);
-      } catch (err) {
-        console.error('Erreur récupération votes:', err);
-        return [];
-      }
-    },
+    queryFn: () => voteService.getMyVotedProjects(),
     enabled: !!user,
     retry: 1,
   });
 
   const { data: existingTop = [] } = useQuery<UserTopProject[]>({
     queryKey: ['my-top-projects'],
-    queryFn: () => api.get('/user-top-projects/me').then((r) => r.data),
+    queryFn: () => topProjectService.getMy(),
     enabled: !!user,
   });
 
@@ -49,8 +40,7 @@ export default function TopProjectsPage() {
 
   useEffect(() => {
     if (existingTop.length > 0 && !initialized) {
-      const initOrder: string[] = [];
-      existingTop.forEach((t) => { initOrder.push(t.project_id); });
+      const initOrder = existingTop.map((t) => t.project_id);
       const initRankings: Record<string, number> = {};
       initOrder.forEach((id, i) => { initRankings[id] = i + 1; });
       setRankings(initRankings);
@@ -67,16 +57,14 @@ export default function TopProjectsPage() {
 
   function toggleProject(projectId: string) {
     if (rankings[projectId]) {
-      const newRankings = { ...rankings };
-      delete newRankings[projectId];
       const newOrder = orderedSelected.filter((id) => id !== projectId);
       const reRanked: Record<string, number> = {};
       newOrder.forEach((id, i) => { reRanked[id] = i + 1; });
       setRankings(reRanked);
       setOrderedSelected(newOrder);
     } else {
+      if (orderedSelected.length >= 3) return;
       const newRank = orderedSelected.length + 1;
-      if (newRank > 3) return;
       setRankings((prev) => ({ ...prev, [projectId]: newRank }));
       setOrderedSelected((prev) => [...prev, projectId]);
     }
@@ -100,8 +88,8 @@ export default function TopProjectsPage() {
   function onDragEnd() { setDragIdx(null); }
 
   const saveMutation = useMutation({
-    mutationFn: (newRankings: { project_id: string; rank: number }[]) =>
-      api.post('/user-top-projects/me', { rankings: newRankings }),
+    mutationFn: (entries: { project_id: string; rank: number }[]) =>
+      topProjectService.saveMy(entries),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-top-projects'] });
       navigate('/');
@@ -109,8 +97,8 @@ export default function TopProjectsPage() {
   });
 
   function handleSave() {
-    const rankingsArray = Object.entries(rankings).map(([project_id, rank]) => ({ project_id, rank }));
-    saveMutation.mutate(rankingsArray);
+    const entries = Object.entries(rankings).map(([project_id, rank]) => ({ project_id, rank }));
+    saveMutation.mutate(entries);
   }
 
   const hasChanges = Object.keys(rankings).length > 0;
@@ -130,7 +118,6 @@ export default function TopProjectsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 page-enter">
-      {/* Header */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-500/20 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
           <Trophy size={28} className="text-yellow-500" />
@@ -143,7 +130,6 @@ export default function TopProjectsPage() {
         </p>
       </div>
 
-      {/* Classement actuel */}
       <section className="mb-8">
         <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
           <Trophy size={12} /> Ton classement
@@ -199,7 +185,6 @@ export default function TopProjectsPage() {
         )}
       </section>
 
-      {/* Projets likés disponibles */}
       {availableProjects.length > 0 && (
         <section className="mb-8">
           <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
@@ -234,7 +219,6 @@ export default function TopProjectsPage() {
         </section>
       )}
 
-      {/* Aucun like */}
       {likedProjects.length === 0 && (
         <div className="text-center py-16">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/10 flex items-center justify-center mx-auto mb-4">
@@ -248,7 +232,6 @@ export default function TopProjectsPage() {
         </div>
       )}
 
-      {/* Barre d'action */}
       {likedProjects.length > 0 && (
         <div className="sticky bottom-4 glass-card-static rounded-2xl p-4 flex items-center justify-between">
           <p className="text-sm text-[var(--text-muted)]">

@@ -5,12 +5,12 @@ import Button from '../components/ui/Button';
 import InputField from '../components/ui/InputField';
 import SelectField from '../components/ui/SelectField';
 import { PROMOS, SPECIALTIES } from '../constants/promos';
-import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { userService } from '../services/user.service';
 import type { Profile } from '../types';
 
 export default function ProfilePage() {
-  const { user, profile: authProfile, setProfile: setAuthProfile, loading: authLoading } = useAuth();
+  const { user, profile: authProfile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -32,14 +32,13 @@ export default function ProfilePage() {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await api.put('/users/me', {
+      await userService.updateMe({
         first_name: profile?.first_name,
         last_name: profile?.last_name,
         promo: profile?.promo,
         specialty: profile?.specialty,
       });
-      setProfile(res.data);
-      setAuthProfile(res.data);
+      await refreshProfile();
       setMessage({ type: 'success', text: 'Profil mis à jour avec succès.' });
     } catch {
       setMessage({ type: 'error', text: 'Erreur lors de la mise à jour du profil.' });
@@ -63,11 +62,14 @@ export default function ProfilePage() {
 
     setPasswordLoading(true);
     try {
-      await api.put('/auth/password', { password: passwordForm.newPassword });
+      await userService.changePassword(passwordForm.newPassword);
       setMessage({ type: 'success', text: 'Mot de passe modifié avec succès.' });
       setPasswordForm({ newPassword: '', confirmPassword: '' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors du changement de mot de passe.' });
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Erreur lors du changement de mot de passe.';
+      setMessage({ type: 'error', text: message });
     } finally {
       setPasswordLoading(false);
     }
@@ -95,7 +97,6 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Profile Information */}
       <div className="glass-card-static p-6 mb-6">
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Informations personnelles</h2>
         <form onSubmit={handleSave} className="space-y-4">
@@ -134,7 +135,6 @@ export default function ProfilePage() {
         </form>
       </div>
 
-      {/* Change Password */}
       <div className="glass-card-static p-6">
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Modifier le mot de passe</h2>
         <form onSubmit={handleChangePassword} className="space-y-4">

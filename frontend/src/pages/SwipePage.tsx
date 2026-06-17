@@ -3,9 +3,9 @@ import { Heart, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import api from '../lib/api';
+import { projectService } from '../services/project.service';
+import { voteService } from '../services/vote.service';
 import type { Project } from '../types';
-
 
 const STATUS_LABEL: Record<string, string> = {
   idea: 'Idée',
@@ -22,7 +22,7 @@ export default function SwipePage() {
 
   const { data: projects = [], isLoading } = useQuery<Project[]>({
     queryKey: ['projects-swipe'],
-    queryFn: () => api.get('/projects').then((r) => r.data),
+    queryFn: () => projectService.getAll(),
   });
 
   const [index, setIndex] = useState(0);
@@ -70,22 +70,25 @@ export default function SwipePage() {
     if (!user) { navigate('/login'); return; }
     setLeaving('right');
     try {
-      await api.post(`/projects/${current.id}/votes`);
+      await voteService.vote(current.id);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-    } catch { /* déjà voté */ }
+    } catch {
+      // vote already exists
+    }
   }
 
   async function triggerPass() {
     if (!user) { navigate('/login'); return; }
     setLeaving('left');
     try {
-      await api.post(`/projects/${current.id}/dislikes`);
+      await voteService.dislike(current.id);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-    } catch { /* déjà disliké */ }
+    } catch {
+      // dislike already exists
+    }
   }
 
   const rotation = dragX / 15;
-  const opacity = Math.max(0, 1 - Math.abs(dragX) / 400);
   const likeOpacity = Math.min(1, Math.max(0, dragX / SWIPE_THRESHOLD));
   const passOpacity = Math.min(1, Math.max(0, -dragX / SWIPE_THRESHOLD));
 
@@ -103,22 +106,22 @@ export default function SwipePage() {
         <div className="w-20 h-20 bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-full flex items-center justify-center text-4xl">🎉</div>
         <p className="text-xl font-bold text-[var(--text-primary)]">Tu as tout vu !</p>
         <p className="text-[var(--text-secondary)] text-sm">Plus aucun projet à découvrir pour l'instant.</p>
-          <div className="flex gap-3 mt-2">
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={() => setIndex(0)}
+            className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            Recommencer
+          </button>
+          {user && (
             <button
-              onClick={() => setIndex(0)}
-              className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              onClick={() => navigate('/top-projects')}
+              className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/20"
             >
-              Recommencer
+              🏆 Mon Top 3
             </button>
-            {user && (
-              <button
-                onClick={() => navigate('/top-projects')}
-                className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/20"
-              >
-                🏆 Mon Top 3
-              </button>
-            )}
-          </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -137,14 +140,11 @@ export default function SwipePage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-8 select-none page-enter">
-      {/* Stack de cartes */}
       <div className="relative w-80 h-[480px]">
-        {/* Carte suivante (en dessous) */}
         {next && (
           <div className="absolute inset-0 glass-card-static rounded-2xl shadow-md scale-95 translate-y-4" />
         )}
 
-        {/* Carte courante */}
         <div
           ref={cardRef}
           style={cardStyle}
@@ -154,7 +154,6 @@ export default function SwipePage() {
           onPointerCancel={onPointerUp}
           className="absolute inset-0 glass-card-static rounded-2xl shadow-xl flex flex-col p-6 overflow-hidden"
         >
-          {/* Badge LIKE */}
           <div
             style={{ opacity: likeOpacity }}
             className="absolute top-8 left-6 border-4 border-emerald-500 text-emerald-500 font-black text-2xl px-3 py-1 rounded-xl rotate-[-20deg] pointer-events-none"
@@ -162,7 +161,6 @@ export default function SwipePage() {
             LIKE
           </div>
 
-          {/* Badge PASS */}
           <div
             style={{ opacity: passOpacity }}
             className="absolute top-8 right-6 border-4 border-red-400 text-red-400 font-black text-2xl px-3 py-1 rounded-xl rotate-[20deg] pointer-events-none"
@@ -170,7 +168,6 @@ export default function SwipePage() {
             PASS
           </div>
 
-          {/* Contenu */}
           <div className="flex items-center justify-between mb-4">
             <span className={`theme-badge theme-badge-${current.theme.toLowerCase()}`}>
               {current.theme}
@@ -196,9 +193,7 @@ export default function SwipePage() {
 
           <div className="flex flex-wrap gap-1 mt-4">
             {current.tags?.slice(0, 4).map((tag) => (
-              <span key={tag} className="tag-pill">
-                #{tag}
-              </span>
+              <span key={tag} className="tag-pill">#{tag}</span>
             ))}
           </div>
 

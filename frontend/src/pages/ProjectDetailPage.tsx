@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users, ThumbsDown } from 'lucide-react';
-import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
-import api from '../lib/api';
+import { projectService } from '../services/project.service';
+import { storageService } from '../services/storage.service';
+import { voteService } from '../services/vote.service';
 import type { Project } from '../types';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -22,25 +23,23 @@ export default function ProjectDetailPage() {
 
   const { data: project, isLoading } = useQuery<Project>({
     queryKey: ['project', id],
-    queryFn: () => api.get(`/projects/${id}`).then((r) => r.data),
+    queryFn: () => projectService.getById(id!),
   });
 
   const { data: hasVoted = false } = useQuery<boolean>({
     queryKey: ['vote', id, user?.id],
-    queryFn: () => api.get(`/projects/${id}/votes/me`).then((r) => r.data.voted),
+    queryFn: () => voteService.hasVoted(id!),
     enabled: !!user,
   });
 
   const { data: hasDisliked = false } = useQuery<boolean>({
     queryKey: ['dislike', id, user?.id],
-    queryFn: () => api.get(`/projects/${id}/dislikes/me`).then((r) => r.data.disliked),
+    queryFn: () => voteService.hasDisliked(id!),
     enabled: !!user,
   });
 
   const voteMutation = useMutation({
-    mutationFn: () => hasVoted
-      ? api.delete(`/projects/${id}/votes`)
-      : api.post(`/projects/${id}/votes`),
+    mutationFn: () => (hasVoted ? voteService.unvote(id!) : voteService.vote(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
@@ -49,9 +48,7 @@ export default function ProjectDetailPage() {
   });
 
   const dislikeMutation = useMutation({
-    mutationFn: () => hasDisliked
-      ? api.delete(`/projects/${id}/dislikes`)
-      : api.post(`/projects/${id}/dislikes`),
+    mutationFn: () => (hasDisliked ? voteService.undislike(id!) : voteService.dislike(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
@@ -60,7 +57,7 @@ export default function ProjectDetailPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => api.delete(`/projects/${id}`),
+    mutationFn: () => projectService.delete(id!),
     onSuccess: () => navigate('/'),
   });
 
@@ -143,44 +140,14 @@ export default function ProjectDetailPage() {
                       <FileText size={14} /> Document Joint
                     </h2>
                     <div className="flex items-center gap-4">
-                      <a
-                        href="#"
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          try {
-                            const urlParts = project.file_url.split('/');
-                            const rawFileName = urlParts[urlParts.length - 1].split('?')[0];
-
-                            let displayFileName = `${project.title || 'document'}.pdf`;
-                            if (rawFileName.includes('-')) {
-                              const parts = rawFileName.split('-');
-                              parts.shift();
-                              displayFileName = parts.join('-');
-                            }
-
-                            const { supabase } = await import('../lib/supabase');
-                            const { data: blob, error } = await supabase.storage.from('project_files').download(rawFileName);
-
-                            if (error) throw error;
-                            if (!blob) throw new Error("No blob returned");
-
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = displayFileName;
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            window.URL.revokeObjectURL(url);
-                          } catch (err) {
-                            console.error('Download failed', err);
-                            window.open(`${project.file_url}?download=${encodeURIComponent(project.title || 'document')}.pdf`, '_blank');
-                          }
-                        }}
+                      <button
+                        onClick={() => storageService.downloadProjectFile(project.file_url!, project.title).catch(() => {
+                          window.open(`${project.file_url}?download=${encodeURIComponent(project.title)}.pdf`, '_blank');
+                        })}
                         className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-80 transition-opacity flex items-center gap-1"
                       >
                         <Download size={14} className="text-purple-600" /> Télécharger
-                      </a>
+                      </button>
                       <a
                         href={project.file_url}
                         target="_blank"
@@ -203,9 +170,8 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* Sidebar — on mobile, shown below main content */}
+          {/* Sidebar */}
           <div className="space-y-4">
-            {/* Vote */}
             <div className="glass-card-static p-5">
               <div className="flex gap-2">
                 <button
@@ -239,7 +205,6 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            {/* Meta */}
             <div className="glass-card-static p-4 sm:p-5 space-y-4 text-sm">
               <div>
                 <p className="text-xs text-[var(--text-muted)] mb-1 font-bold uppercase tracking-widest">Ajouté le</p>
@@ -266,7 +231,6 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            {/* Actions admin/owner */}
             {canEdit && (
               <div className="glass-card-static p-4 sm:p-5 space-y-2">
                 <Button

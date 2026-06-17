@@ -1,9 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trophy, Gift, Stars, Heart, Zap, TrendingUp } from 'lucide-react';
-import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../hooks/useNotification';
+import { rewardService } from '../services/reward.service';
+import type { RewardData, Trophy as TrophyType } from '../types';
+
+const RARITY_COLORS: Record<string, { bg: string; text: string; badge: string }> = {
+  commun:     { bg: 'bg-gray-50',    text: 'text-gray-700',   badge: 'bg-gray-200 text-gray-800'     },
+  rare:       { bg: 'bg-blue-50',    text: 'text-blue-700',   badge: 'bg-blue-200 text-blue-900'     },
+  epique:     { bg: 'bg-purple-50',  text: 'text-purple-700', badge: 'bg-purple-200 text-purple-900' },
+  legendaire: { bg: 'bg-yellow-50',  text: 'text-yellow-700', badge: 'bg-yellow-200 text-yellow-900' },
+};
+
+const LEVELS = [
+  { name: 'Nouvel arrivant', icon: '🌱', range: '0 - 49 points' },
+  { name: 'Explorateur',     icon: '🧭', range: '50 - 149 points' },
+  { name: 'Innovateur',      icon: '💡', range: '150 - 299 points' },
+  { name: 'Actionnaire',     icon: '📈', range: '300 - 599 points' },
+  { name: 'Directeur',       icon: '🎩', range: '600 - 999 points' },
+  { name: 'Visionnaire',     icon: '✨', range: '1000+ points' },
+];
 
 export default function RewardsPage() {
   const queryClient = useQueryClient();
@@ -11,50 +28,35 @@ export default function RewardsPage() {
   const { notify } = useNotification();
   const [filter, setFilter] = useState<'all' | 'earned' | 'locked'>('all');
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery<RewardData>({
     queryKey: ['rewards'],
-    queryFn: () => api.get('/rewards/me').then((r) => r.data),
+    queryFn: () => rewardService.getMy(),
     enabled: !!user,
     refetchInterval: 5000,
   });
 
   useEffect(() => {
-    if (data?.notifications) {
-      if (data.notifications.newTrophies?.length > 0) {
-        data.notifications.newTrophies.forEach((trophy: any) => {
-          notify({
-            type: 'trophy',
-            title: `🏆 ${trophy.title}`,
-            description: trophy.description,
-          });
-        });
-      }
-      if (data.notifications.levelChanged) {
-        notify({
-          type: 'level',
-          title: `⭐ Nouveau niveau: ${data.notifications.levelChanged.level}`,
-          description: 'Vous avez atteint un nouveau palier!',
-        });
-      }
+    if (!data?.notifications) return;
+    data.notifications.newTrophies?.forEach((trophy) => {
+      notify({ type: 'trophy', title: `🏆 ${trophy.title}`, description: trophy.description });
+    });
+    if (data.notifications.levelChanged) {
+      notify({
+        type: 'level',
+        title: `⭐ Nouveau niveau: ${data.notifications.levelChanged.level}`,
+        description: 'Vous avez atteint un nouveau palier!',
+      });
     }
   }, [data?.notifications, notify]);
 
   const participateMutation = useMutation({
-    mutationFn: () => api.post('/rewards/participate'),
+    mutationFn: () => rewardService.participate(),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      if (res.data.participation.status === 'won') {
-        notify({
-          type: 'success',
-          title: '🎉 Gagné!',
-          description: res.data.participation.prize,
-        });
+      if (res.participation.status === 'won') {
+        notify({ type: 'success', title: '🎉 Gagné!', description: res.participation.prize });
       } else {
-        notify({
-          type: 'info',
-          title: 'Participation enregistrée',
-          description: res.data.participation.prize,
-        });
+        notify({ type: 'info', title: 'Participation enregistrée', description: res.participation.prize });
       }
     },
     onError: () => {
@@ -66,25 +68,14 @@ export default function RewardsPage() {
     return <div className="p-8 text-center text-[var(--text-muted)]">Chargement des récompenses...</div>;
   }
 
-  const stats = data.stats || { ideaCount: 0, votesGivenCount: 0, totalLikes: 0, mostLikedProject: null, participationCount: 0 };
-  const progress = data.progress || [];
-  const earned = data.earned || [];
-  const allTrophies = progress;
+  const earnedIds = new Set(data.earned.map((t) => t.id));
+  const earnedTrophies = data.progress.filter((t) => earnedIds.has(t.id));
+  const lockedTrophies = data.progress.filter((t) => !earnedIds.has(t.id));
 
-  const earmarkedIds = new Set(earned.map((t: any) => t.id));
-  const earnedTrophies = allTrophies.filter((t: any) => earmarkedIds.has(t.id));
-  const lockedTrophies = allTrophies.filter((t: any) => !earmarkedIds.has(t.id));
-
-  let filteredTrophies = allTrophies;
-  if (filter === 'earned') filteredTrophies = earnedTrophies;
-  if (filter === 'locked') filteredTrophies = lockedTrophies;
-
-  const rarityColors: Record<string, { bg: string; text: string; badge: string }> = {
-    commun: { bg: 'bg-gray-50', text: 'text-gray-700', badge: 'bg-gray-200 text-gray-800' },
-    rare: { bg: 'bg-blue-50', text: 'text-blue-700', badge: 'bg-blue-200 text-blue-900' },
-    epique: { bg: 'bg-purple-50', text: 'text-purple-700', badge: 'bg-purple-200 text-purple-900' },
-    legendaire: { bg: 'bg-yellow-50', text: 'text-yellow-700', badge: 'bg-yellow-200 text-yellow-900' },
-  };
+  const filteredTrophies =
+    filter === 'earned' ? earnedTrophies :
+    filter === 'locked' ? lockedTrophies :
+    data.progress;
 
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
@@ -107,7 +98,6 @@ export default function RewardsPage() {
           </button>
         </div>
 
-        {/* Niveau et Points */}
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
           <div className="lg:col-span-2 glass-card-static p-6">
             <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-6" style={{ fontFamily: 'var(--font-display)' }}>Niveau et Progression</h2>
@@ -144,86 +134,74 @@ export default function RewardsPage() {
                 <Zap size={16} className="text-yellow-500" />
                 <div className="flex-1">
                   <p className="text-xs text-[var(--text-muted)]">Idées postées</p>
-                  <p className="font-bold text-[var(--text-primary)]">{stats.ideaCount}</p>
+                  <p className="font-bold text-[var(--text-primary)]">{data.stats.ideaCount}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]">
                 <Heart size={16} className="text-red-500" />
                 <div className="flex-1">
                   <p className="text-xs text-[var(--text-muted)]">Likes reçus</p>
-                  <p className="font-bold text-[var(--text-primary)]">{stats.totalLikes}</p>
+                  <p className="font-bold text-[var(--text-primary)]">{data.stats.totalLikes}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]">
                 <TrendingUp size={16} className="text-emerald-500" />
                 <div className="flex-1">
                   <p className="text-xs text-[var(--text-muted)]">Votes donnés</p>
-                  <p className="font-bold text-[var(--text-primary)]">{stats.votesGivenCount}</p>
+                  <p className="font-bold text-[var(--text-primary)]">{data.stats.votesGivenCount}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Post le plus liké */}
-        {stats.mostLikedProject && (
+        {data.stats.mostLikedProject && (
           <div className="mb-8 glass-card-static p-6 border-l-4 border-yellow-500">
             <div className="flex items-center gap-3 mb-2">
               <Trophy size={18} className="text-yellow-500" />
               <h3 className="font-semibold text-[var(--text-primary)]">Post le plus liké</h3>
             </div>
             <p className="text-sm text-[var(--text-secondary)]">
-              <span className="font-bold">{stats.mostLikedProject.title}</span> avec <span className="font-bold text-yellow-600">{stats.mostLikedProject.likes} ❤️</span>
+              <span className="font-bold">{data.stats.mostLikedProject.title}</span> avec{' '}
+              <span className="font-bold text-yellow-600">{data.stats.mostLikedProject.likes} ❤️</span>
             </p>
           </div>
         )}
 
-        {/* Trophées */}
         <div className="glass-card-static p-6">
           <div className="flex items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
               <Trophy size={20} className="text-yellow-500" />
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>Trophées ({filteredTrophies.length})</h2>
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
+                Trophées ({filteredTrophies.length})
+              </h2>
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filter === 'all'
-                    ? 'bg-purple-500/20 text-purple-600 font-medium'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
-                }`}
-              >
-                Tous ({allTrophies.length})
-              </button>
-              <button
-                onClick={() => setFilter('earned')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filter === 'earned'
-                    ? 'bg-emerald-500/20 text-emerald-600 font-medium'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
-                }`}
-              >
-                Acquis ({earnedTrophies.length})
-              </button>
-              <button
-                onClick={() => setFilter('locked')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filter === 'locked'
-                    ? 'bg-gray-500/20 text-gray-600 font-medium'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
-                }`}
-              >
-                Verrouillés ({lockedTrophies.length})
-              </button>
+              {(['all', 'earned', 'locked'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                    filter === f
+                      ? f === 'earned' ? 'bg-emerald-500/20 text-emerald-600 font-medium'
+                        : f === 'locked' ? 'bg-gray-500/20 text-gray-600 font-medium'
+                        : 'bg-purple-500/20 text-purple-600 font-medium'
+                      : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
+                  }`}
+                >
+                  {f === 'all' && `Tous (${data.progress.length})`}
+                  {f === 'earned' && `Acquis (${earnedTrophies.length})`}
+                  {f === 'locked' && `Verrouillés (${lockedTrophies.length})`}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredTrophies.map((trophy: any) => {
-              const isEarned = earmarkedIds.has(trophy.id);
-              const colors = rarityColors[trophy.rarity] || rarityColors.commun;
-              const earnedData = earned.find((e: any) => e.id === trophy.id);
+            {filteredTrophies.map((trophy: TrophyType) => {
+              const isEarned = earnedIds.has(trophy.id);
+              const colors = RARITY_COLORS[trophy.rarity] ?? RARITY_COLORS.commun;
+              const earnedData = data.earned.find((e) => e.id === trophy.id);
 
               return (
                 <div
@@ -251,9 +229,7 @@ export default function RewardsPage() {
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center justify-between">
                       <span>Progression: {trophy.progress} / {trophy.threshold}</span>
-                      {isEarned && (
-                        <span className="text-yellow-600 font-bold">+{trophy.points} pts</span>
-                      )}
+                      {isEarned && <span className="text-yellow-600 font-bold">+{trophy.points} pts</span>}
                     </div>
                     {!isEarned && (
                       <div className="h-1.5 rounded-full bg-[var(--border-light)] overflow-hidden">
@@ -263,7 +239,7 @@ export default function RewardsPage() {
                         />
                       </div>
                     )}
-                    {isEarned && earnedData && (
+                    {isEarned && earnedData?.awarded_at && (
                       <p className="text-[var(--text-muted)]">
                         Obtenu le {new Date(earnedData.awarded_at).toLocaleDateString('fr-FR')}
                       </p>
@@ -275,21 +251,13 @@ export default function RewardsPage() {
           </div>
         </div>
 
-        {/* Paliers */}
         <div className="glass-card-static p-6 mt-8">
           <div className="flex items-center gap-3 mb-6">
             <Stars size={20} className="text-pink-500" />
             <h2 className="text-lg font-semibold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>Les paliers</h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              { name: 'Nouvel arrivant', icon: '🌱', range: '0 - 49 points' },
-              { name: 'Explorateur', icon: '🧭', range: '50 - 149 points' },
-              { name: 'Innovateur', icon: '💡', range: '150 - 299 points' },
-              { name: 'Actionnaire', icon: '📈', range: '300 - 599 points' },
-              { name: 'Directeur', icon: '🎩', range: '600 - 999 points' },
-              { name: 'Visionnaire', icon: '✨', range: '1000+ points' },
-            ].map((level) => (
+            {LEVELS.map((level) => (
               <div key={level.name} className={`glass-card p-4 border rounded-xl transition-all ${data.level === level.name ? 'border-purple-500/50 bg-purple-500/10' : 'border-[var(--border-light)]'}`}>
                 <p className="text-2xl mb-2">{level.icon}</p>
                 <p className="font-semibold text-[var(--text-primary)]">{level.name}</p>

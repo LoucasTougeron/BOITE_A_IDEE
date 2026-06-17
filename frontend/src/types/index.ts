@@ -41,12 +41,68 @@ export interface UserTopProject {
   projects: Project;
 }
 
-export interface BudgetEntry {
+export interface AdminVote {
   id: string;
+  created_at: string;
+  users: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    teams?: { name: string };
+  };
+  projects: {
+    title: string;
+    theme: string;
+  };
+}
+
+export interface ProjectStat {
   project_id: string;
-  type: string;
-  amount: number;
-  category: string;
-  phase: 'build' | 'run';
-  capex_opex: 'capex' | 'opex';
+  title: string;
+  theme: string;
+  specialty: string;
+  likes: number;
+  topScore: number;
+  top1Count: number;
+  top2Count: number;
+  top3Count: number;
+}
+
+export interface TeamStats {
+  team_id: string;
+  team_name: string;
+  byLikes: ProjectStat[];
+  byTopScore: ProjectStat[];
+}
+
+export interface Trophy {
+  id: string;
+  title: string;
+  description: string;
+  rarity: 'commun' | 'rare' | 'epique' | 'legendaire';
+  progress: number;
+  threshold: number;
+  points: number;
+  awarded_at?: string;
+}
+
+export interface RewardData {
+  level: string;
+  nextLevel: string;
+  points: number;
+  pointsForNextLevel: number;
+  progressToNextLevel: number;
+  stats: {
+    ideaCount: number;
+    votesGivenCount: number;
+    totalLikes: number;
+    participationCount: number;
+    mostLikedProject: { title: string; likes: number } | null;
+  };
+  progress: Trophy[];
+  earned: Trophy[];
+  notifications?: {
+    newTrophies?: Trophy[];
+    levelChanged?: { level: string };
+  };
 }

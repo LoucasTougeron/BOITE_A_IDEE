@@ -3,29 +3,13 @@ import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
-import api from '../lib/api';
-import type { Profile, Team } from '../types';
+import { dashboardService } from '../services/dashboard.service';
+import { teamService } from '../services/team.service';
+import { topProjectService } from '../services/topProject.service';
+import { userService } from '../services/user.service';
+import type { AdminVote, Profile, ProjectStat, Team, TeamStats } from '../types';
 
 type Tab = 'votes' | 'teams' | 'rankings';
-
-interface ProjectStat {
-  project_id: string;
-  title: string;
-  theme: string;
-  specialty: string;
-  likes: number;
-  topScore: number;
-  top1Count: number;
-  top2Count: number;
-  top3Count: number;
-}
-
-interface TeamStats {
-  team_id: string;
-  team_name: string;
-  byLikes: ProjectStat[];
-  byTopScore: ProjectStat[];
-}
 
 interface Stats {
   byLikes: ProjectStat[];
@@ -36,46 +20,45 @@ export default function DashboardPage() {
   const { user, isAdmin, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('votes');
   const [newTeamName, setNewTeamName] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const queryClient = useQueryClient();
 
-  const { data: votes = [], isLoading: loadingVotes } = useQuery({
+  const { data: votes = [], isLoading: loadingVotes } = useQuery<AdminVote[]>({
     queryKey: ['admin-votes'],
-    queryFn: () => api.get('/votes').then(r => r.data),
+    queryFn: () => dashboardService.getVotes(),
     enabled: isAdmin,
   });
 
   const { data: teams = [], isLoading: loadingTeams } = useQuery<Team[]>({
     queryKey: ['teams'],
-    queryFn: () => api.get('/teams').then(r => r.data),
+    queryFn: () => teamService.getAll(),
     enabled: isAdmin,
   });
 
   const { data: usersList = [], isLoading: loadingUsers } = useQuery<Profile[]>({
     queryKey: ['users'],
-    queryFn: () => api.get('/users').then(r => r.data),
+    queryFn: () => userService.getAll(),
     enabled: isAdmin,
   });
 
   const { data: globalStats } = useQuery<Stats>({
     queryKey: ['top-stats'],
-    queryFn: () => api.get('/user-top-projects/stats').then(r => r.data),
+    queryFn: () => topProjectService.getGlobalStats(),
     enabled: isAdmin,
   });
 
   const { data: teamStatsList = [] } = useQuery<TeamStats[]>({
     queryKey: ['top-stats-teams'],
-    queryFn: () => api.get('/user-top-projects/stats/teams').then(r => r.data),
+    queryFn: () => topProjectService.getStatsByTeam(),
     enabled: isAdmin,
   });
 
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-
   const statsToShow: Stats | undefined = selectedTeamId
-    ? teamStatsList.find(t => t.team_id === selectedTeamId)
+    ? teamStatsList.find((t) => t.team_id === selectedTeamId)
     : globalStats;
 
   const createTeamMutation = useMutation({
-    mutationFn: (name: string) => api.post('/teams', { name }),
+    mutationFn: (name: string) => teamService.create(name),
     onSuccess: () => {
       setNewTeamName('');
       queryClient.invalidateQueries({ queryKey: ['teams'] });
@@ -83,8 +66,8 @@ export default function DashboardPage() {
   });
 
   const assignTeamMutation = useMutation({
-    mutationFn: ({ userId, teamId }: { userId: string; teamId: string | null }) => 
-      api.put(`/users/${userId}/team`, { team_id: teamId }),
+    mutationFn: ({ userId, teamId }: { userId: string; teamId: string | null }) =>
+      userService.assignTeam(userId, teamId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-votes'] });
@@ -106,31 +89,19 @@ export default function DashboardPage() {
         </h1>
 
         <div className="flex gap-4 mb-8 border-b border-[var(--border-light)] pb-2">
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('votes')}
-              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'votes' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-            >
-              Votes des étudiants
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('rankings')}
-              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'rankings' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-            >
-              Classements
-            </button>
-          )}
-          {isAdmin && (
-            <button
-              onClick={() => setActiveTab('teams')}
-              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'teams' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-            >
-              Gestion des classes
-            </button>
-          )}
-          {!isAdmin && (
+          {isAdmin ? (
+            <>
+              {(['votes', 'rankings', 'teams'] as Tab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === tab ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
+                >
+                  {tab === 'votes' ? 'Votes des étudiants' : tab === 'rankings' ? 'Classements' : 'Gestion des classes'}
+                </button>
+              ))}
+            </>
+          ) : (
             <p className="text-sm text-[var(--text-muted)] py-2">Accès réservé à la pédagogie</p>
           )}
         </div>
@@ -152,7 +123,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border-light)]">
-                    {votes.map((v: any) => (
+                    {votes.map((v) => (
                       <tr key={v.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                         <td className="px-6 py-4">
                           <div className="font-medium text-[var(--text-primary)]">
@@ -200,7 +171,7 @@ export default function DashboardPage() {
                 className="input-modern text-sm py-1.5 px-3"
               >
                 <option value="">Toutes les classes</option>
-                {teams.map(t => (
+                {teams.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
@@ -333,7 +304,7 @@ export default function DashboardPage() {
                   <div className="text-sm text-[var(--text-muted)]">Chargement...</div>
                 ) : (
                   <ul className="space-y-2">
-                    {teams.map(t => (
+                    {teams.map((t) => (
                       <li key={t.id} className="text-sm text-[var(--text-secondary)] font-medium p-2 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-light)]">
                         {t.name}
                       </li>
@@ -362,7 +333,7 @@ export default function DashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border-light)]">
-                      {usersList.map((u: Profile) => (
+                      {usersList.map((u) => (
                         <tr key={u.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                           <td className="px-6 py-3">
                             <div className="font-medium text-[var(--text-primary)]">
@@ -383,7 +354,7 @@ export default function DashboardPage() {
                               disabled={assignTeamMutation.isPending}
                             >
                               <option value="">-- Aucune --</option>
-                              {teams.map(t => (
+                              {teams.map((t) => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                               ))}
                             </select>

@@ -52,8 +52,9 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    let error = null;
     if (isRegister) {
-      const { error } = await signUp({
+      error = await signUp({
         email,
         password,
         first_name: firstName,
@@ -61,13 +62,12 @@ export default function LoginPage() {
         promo,
         specialty: specialtyRequired ? specialty : undefined,
       });
-      setLoading(false);
-      if (error) return setError(error.message);
     } else {
-      const { error } = await signIn(email, password);
-      setLoading(false);
-      if (error) return setError(error.message);
+      error = await signIn(email, password);
     }
+    
+    setLoading(false);
+    if (error) return setError(error.message);
 
     navigate('/');
   }

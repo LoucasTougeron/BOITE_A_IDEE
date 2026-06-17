@@ -7,8 +7,8 @@ import Button from '../components/ui/Button';
 import InputField from '../components/ui/InputField';
 import SelectField from '../components/ui/SelectField';
 import TextareaField from '../components/ui/TextareaField';
-import api from '../lib/api';
-import { supabase } from '../lib/supabase';
+import { projectService, type ProjectPayload } from '../services/project.service';
+import { storageService } from '../services/storage.service';
 
 const THEMES = ['Tech', 'Design', 'Business', 'Social', 'Science', 'Art'];
 const STATUSES = [
@@ -17,21 +17,37 @@ const STATUSES = [
   { value: 'completed', label: 'Terminé' },
 ];
 
+interface FormState {
+  title: string;
+  description: string;
+  objective: string;
+  theme: string;
+  tags: string;
+  link: string;
+  team_name: string;
+  specialty: string;
+  status: string;
+  file_url: string;
+}
+
+const DEFAULT_FORM: FormState = {
+  title: '', description: '', objective: '', theme: THEMES[0],
+  tags: '', link: '', team_name: '', specialty: '', status: 'idea', file_url: '',
+};
+
 export default function ProjectFormPage() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const isEdit = !!id;
 
-  const [form, setForm] = useState({
-    title: '', description: '', objective: '', theme: THEMES[0],
-    tags: '', link: '', team_name: '', specialty: '', status: 'idea', file_url: '',
-  });
+  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const { data: existing } = useQuery({
     queryKey: ['project', id],
-    queryFn: () => api.get(`/projects/${id}`).then((r) => r.data),
+    queryFn: () => projectService.getById(id!),
     enabled: isEdit,
   });
 
@@ -42,36 +58,26 @@ export default function ProjectFormPage() {
   }, [existing]);
 
   const mutation = useMutation({
-    mutationFn: (data: any) =>
-      isEdit ? api.put(`/projects/${id}`, data) : api.post('/projects', data),
-    onSuccess: (res) => navigate(`/projects/${res.data.id}`),
+    mutationFn: (payload: ProjectPayload) =>
+      isEdit ? projectService.update(id!, payload) : projectService.create(payload),
+    onSuccess: (project) => navigate(`/projects/${project.id}`),
   });
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setUploadError('');
 
     let fileUrl = form.file_url;
 
     if (file) {
       setUploading(true);
-      const fileExt = file.name.split('.').pop() || 'pdf';
-      const originalName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-      const safeName = originalName.replace(/[^a-zA-Z0-9_-]/g, '_');
-      const fileName = `${Date.now()}-${safeName}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('project_files')
-        .upload(fileName, file);
-
-      if (uploadError) {
-        console.error('Upload error', uploadError);
-        alert("Erreur lors de l'upload du fichier");
+      try {
+        fileUrl = await storageService.uploadProjectFile(file);
+      } catch {
+        setUploadError("Erreur lors de l'upload du fichier. Réessayez.");
         setUploading(false);
         return;
       }
-
-      const { data } = supabase.storage.from('project_files').getPublicUrl(fileName);
-      fileUrl = data.publicUrl;
       setUploading(false);
     }
 
@@ -82,7 +88,7 @@ export default function ProjectFormPage() {
     });
   }
 
-  const set = (field: string) => (value: string) =>
+  const set = (field: keyof FormState) => (value: string) =>
     setForm((f) => ({ ...f, [field]: value }));
 
   return (
@@ -101,7 +107,6 @@ export default function ProjectFormPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-start">
-            {/* Main */}
             <div className="md:col-span-2 space-y-4 sm:space-y-5">
               <div className="glass-card-static p-4 sm:p-6 space-y-4 sm:space-y-5">
                 <InputField
@@ -158,7 +163,6 @@ export default function ProjectFormPage() {
               </div>
             </div>
 
-            {/* Sidebar */}
             <div className="space-y-4">
               <div className="glass-card-static p-4 sm:p-5 space-y-4">
                 <h2 className="font-semibold text-[var(--text-primary)] text-sm" style={{ fontFamily: 'var(--font-display)' }}>
@@ -204,9 +208,9 @@ export default function ProjectFormPage() {
                 </div>
               </div>
 
-              {mutation.isError && (
+              {(uploadError || mutation.isError) && (
                 <AlertMessage type="error">
-                  Une erreur est survenue. Vérifiez les champs.
+                  {uploadError || 'Une erreur est survenue. Vérifiez les champs.'}
                 </AlertMessage>
               )}
 
