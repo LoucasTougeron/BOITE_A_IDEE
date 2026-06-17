@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
 import { BudgetModule } from './budget/budget.module';
 import { ProjectsModule } from './projects/projects.module';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -12,6 +13,7 @@ import { TeamsModule } from './teams/teams.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     SupabaseModule,
+    AuthModule,
     ProjectsModule,
     VotesModule,
     UsersModule,

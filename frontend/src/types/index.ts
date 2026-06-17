@@ -28,6 +28,7 @@ export interface Profile {
   email: string;
   role: 'admin' | 'user';
   specialty?: string;
+  promo?: string;
   team_id?: string;
   teams?: { name: string };
 }
