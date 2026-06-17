@@ -98,12 +98,22 @@ export default function SwipePage() {
         <div className="w-20 h-20 bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-full flex items-center justify-center text-4xl">🎉</div>
         <p className="text-xl font-bold text-[var(--text-primary)]">Tu as tout vu !</p>
         <p className="text-[var(--text-secondary)] text-sm">Plus aucun projet à découvrir pour l'instant.</p>
-        <button
-          onClick={() => setIndex(0)}
-          className="mt-2 px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-        >
-          Recommencer
-        </button>
+          <div className="flex gap-3 mt-2">
+            <button
+              onClick={() => setIndex(0)}
+              className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+            >
+              Recommencer
+            </button>
+            {user && (
+              <button
+                onClick={() => navigate('/top-projects')}
+                className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/20"
+              >
+                🏆 Mon Top 3
+              </button>
+            )}
+          </div>
       </div>
     );
   }

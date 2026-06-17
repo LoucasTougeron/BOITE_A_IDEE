@@ -10,6 +10,7 @@ import ProjectFormPage from './pages/ProjectFormPage';
 import ProjectsPage from './pages/ProjectsPage';
 import SwipePage from './pages/SwipePage';
 import DashboardPage from './pages/DashboardPage';
+import TopProjectsPage from './pages/TopProjectsPage';
 
 const queryClient = new QueryClient();
 
@@ -38,6 +39,7 @@ function AppRoutes() {
           <Route path="/" element={<ProjectsPage />} />
           <Route path="/swipe" element={<SwipePage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/top-projects" element={<ProtectedRoute><TopProjectsPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/projects/new" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
           <Route path="/projects/:id/edit" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
