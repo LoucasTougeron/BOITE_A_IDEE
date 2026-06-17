@@ -134,8 +134,39 @@ export default function ProjectDetailPage() {
                     </h2>
                     <div className="flex items-center gap-4">
                       <a 
-                        href={`${project.file_url}?download=true`} 
-                        download
+                        href="#" 
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          try {
+                            const urlParts = project.file_url.split('/');
+                            const rawFileName = urlParts[urlParts.length - 1].split('?')[0];
+                            
+                            let displayFileName = `${project.title || 'document'}.pdf`;
+                            if (rawFileName.includes('-')) {
+                              const parts = rawFileName.split('-');
+                              parts.shift();
+                              displayFileName = parts.join('-');
+                            }
+                            
+                            const { supabase } = await import('../lib/supabase');
+                            const { data: blob, error } = await supabase.storage.from('project_files').download(rawFileName);
+                            
+                            if (error) throw error;
+                            if (!blob) throw new Error("No blob returned");
+                            
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = displayFileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(url);
+                          } catch (err) {
+                            console.error('Download failed', err);
+                            window.open(`${project.file_url}?download=${encodeURIComponent(project.title || 'document')}.pdf`, '_blank');
+                          }
+                        }}
                         className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-80 transition-opacity flex items-center gap-1"
                       >
                         <Download size={14} className="text-purple-600" /> Télécharger
