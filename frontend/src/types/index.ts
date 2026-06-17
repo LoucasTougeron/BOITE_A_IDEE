@@ -13,6 +13,7 @@ export interface Project {
   creator_id: string;
   created_at: string;
   votes?: { count: number }[];
+  dislikes?: { count: number }[];
 }
 
 export interface Team {
@@ -31,6 +32,13 @@ export interface Profile {
   promo?: string;
   team_id?: string;
   teams?: { name: string };
+}
+
+export interface UserTopProject {
+  id: string;
+  rank: number;
+  project_id: string;
+  projects: Project;
 }
 
 export interface BudgetEntry {

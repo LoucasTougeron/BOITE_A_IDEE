@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import ToastNotifications from './components/ToastNotifications';
 import { useAuth } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import LoginPage from './pages/LoginPage';
@@ -8,8 +9,10 @@ import ProfilePage from './pages/ProfilePage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import ProjectFormPage from './pages/ProjectFormPage';
 import ProjectsPage from './pages/ProjectsPage';
+import RewardsPage from './pages/RewardsPage';
 import SwipePage from './pages/SwipePage';
 import DashboardPage from './pages/DashboardPage';
+import TopProjectsPage from './pages/TopProjectsPage';
 
 const queryClient = new QueryClient();
 
@@ -32,15 +35,18 @@ function AppRoutes() {
       <div className="grid-overlay" />
 
       <Navbar />
+      <ToastNotifications />
       <main className="relative z-10 flex-1">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<ProjectsPage />} />
           <Route path="/swipe" element={<SwipePage />} />
           <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/top-projects" element={<ProtectedRoute><TopProjectsPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/projects/new" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
           <Route path="/projects/:id/edit" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
+          <Route path="/rewards" element={<ProtectedRoute><RewardsPage /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
         </Routes>
       </main>

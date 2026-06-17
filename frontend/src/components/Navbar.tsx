@@ -34,7 +34,13 @@ export default function Navbar() {
             to="/"
             className="px-3 py-1.5 rounded-lg hover:bg-[var(--border-light)] hover:text-[var(--text-primary)] transition-colors"
           >
-            Explorer
+            🌍 Explorer
+          </Link>
+          <Link
+            to="/rewards"
+            className="px-3 py-1.5 rounded-lg hover:bg-[var(--border-light)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            Récompenses
           </Link>
           <Link
             to="/swipe"
@@ -42,6 +48,14 @@ export default function Navbar() {
           >
             🔥 Tinder Mode
           </Link>
+          {user && (
+            <Link
+              to="/top-projects"
+              className="px-3 py-1.5 rounded-lg hover:bg-[var(--border-light)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1.5"
+            >
+              🏆 Mon Top 3
+            </Link>
+          )}
         </div>
       </div>
 
@@ -99,6 +113,10 @@ export default function Navbar() {
             </Link>
             {user && (
               <>
+                <Link to="/top-projects" onClick={() => setMobileOpen(false)}
+                  className="px-3 py-2.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--border-light)] hover:text-[var(--text-primary)] transition-colors flex items-center gap-1.5">
+                  🏆 Mon Top 3
+                </Link>
                 <button
                   onClick={() => { navigate('/projects/new'); setMobileOpen(false); }}
                   className="btn-accent flex items-center justify-center gap-1.5 text-sm py-2.5 mt-1">
