@@ -32,6 +32,13 @@ export interface Profile {
   teams?: { name: string };
 }
 
+export interface UserTopProject {
+  id: string;
+  rank: number;
+  project_id: string;
+  projects: Project;
+}
+
 export interface BudgetEntry {
   id: string;
   project_id: string;
