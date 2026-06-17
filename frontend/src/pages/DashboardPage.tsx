@@ -5,9 +5,35 @@ import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import type { Profile, Team } from '../types';
 
+type Tab = 'votes' | 'teams' | 'rankings';
+
+interface ProjectStat {
+  project_id: string;
+  title: string;
+  theme: string;
+  specialty: string;
+  likes: number;
+  topScore: number;
+  top1Count: number;
+  top2Count: number;
+  top3Count: number;
+}
+
+interface TeamStats {
+  team_id: string;
+  team_name: string;
+  byLikes: ProjectStat[];
+  byTopScore: ProjectStat[];
+}
+
+interface Stats {
+  byLikes: ProjectStat[];
+  byTopScore: ProjectStat[];
+}
+
 export default function DashboardPage() {
-  const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'votes' | 'teams'>('votes');
+  const { user, isAdmin, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>('votes');
   const [newTeamName, setNewTeamName] = useState('');
   const queryClient = useQueryClient();
 
@@ -29,6 +55,26 @@ export default function DashboardPage() {
     enabled: isAdmin,
   });
 
+  // Stats globales
+  const { data: globalStats } = useQuery<Stats>({
+    queryKey: ['top-stats'],
+    queryFn: () => api.get('/user-top-projects/stats').then(r => r.data),
+    enabled: isAdmin,
+  });
+
+  // Stats par classe
+  const { data: teamStatsList = [] } = useQuery<TeamStats[]>({
+    queryKey: ['top-stats-teams'],
+    queryFn: () => api.get('/user-top-projects/stats/teams').then(r => r.data),
+    enabled: isAdmin,
+  });
+
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
+  const statsToShow: Stats | undefined = selectedTeamId
+    ? teamStatsList.find(t => t.team_id === selectedTeamId)
+    : globalStats;
+
   const createTeamMutation = useMutation({
     mutationFn: (name: string) => api.post('/teams', { name }),
     onSuccess: () => {
@@ -46,9 +92,14 @@ export default function DashboardPage() {
     },
   });
 
-  if (!user || !isAdmin) {
-    return <Navigate to="/" replace />;
+  if (loading) {
+    return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
   }
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const showAdminTabs = isAdmin;
 
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
@@ -58,21 +109,36 @@ export default function DashboardPage() {
         </h1>
 
         <div className="flex gap-4 mb-8 border-b border-[var(--border-light)] pb-2">
-          <button
-            onClick={() => setActiveTab('votes')}
-            className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'votes' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-          >
-            Votes des étudiants
-          </button>
-          <button
-            onClick={() => setActiveTab('teams')}
-            className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'teams' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-          >
-            Gestion des classes
-          </button>
+          {showAdminTabs && (
+            <button
+              onClick={() => setActiveTab('votes')}
+              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'votes' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
+            >
+              Votes des étudiants
+            </button>
+          )}
+          {showAdminTabs && (
+            <button
+              onClick={() => setActiveTab('rankings')}
+              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'rankings' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
+            >
+              Classements
+            </button>
+          )}
+          {showAdminTabs && (
+            <button
+              onClick={() => setActiveTab('teams')}
+              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'teams' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
+            >
+              Gestion des classes
+            </button>
+          )}
+          {!showAdminTabs && (
+            <p className="text-sm text-[var(--text-muted)] py-2">Accès réservé à la pédagogie</p>
+          )}
         </div>
 
-        {activeTab === 'votes' && (
+        {showAdminTabs && activeTab === 'votes' && (
           <div className="glass-card-static rounded-xl overflow-hidden shadow-sm">
             {loadingVotes ? (
               <div className="p-8 text-center text-[var(--text-muted)]">Chargement des votes...</div>
@@ -127,9 +193,118 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {activeTab === 'teams' && (
+        {showAdminTabs && activeTab === 'rankings' && (
+          <div className="space-y-8">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-[var(--text-secondary)]">Filtrer par classe :</label>
+              <select
+                value={selectedTeamId}
+                onChange={(e) => setSelectedTeamId(e.target.value)}
+                className="input-modern text-sm py-1.5 px-3"
+              >
+                <option value="">Toutes les classes</option>
+                {teams.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8">
+              <div className="glass-card-static rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-[var(--border-light)] flex items-center gap-2">
+                  <span className="text-lg">❤️</span>
+                  <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+                    Projets les plus likés
+                  </h2>
+                </div>
+                {!statsToShow ? (
+                  <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>
+                ) : statsToShow.byLikes.length === 0 ? (
+                  <div className="p-8 text-center text-[var(--text-muted)]">Aucune donnée pour cette classe.</div>
+                ) : (
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-xs w-10">#</th>
+                        <th className="px-4 py-3 font-semibold text-xs">Projet</th>
+                        <th className="px-4 py-3 font-semibold text-xs w-16 text-center">Likes</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-light)]">
+                      {statsToShow.byLikes.slice(0, 20).map((p, i) => (
+                        <tr key={p.project_id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
+                          <td className="px-4 py-3 text-[var(--text-muted)] font-bold">
+                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-[var(--text-primary)]">{p.title}</div>
+                            <div className="text-xs text-[var(--text-muted)]">{p.theme}{p.specialty ? ` · ${p.specialty}` : ''}</div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="font-bold text-[var(--text-primary)]">{p.likes}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <div className="glass-card-static rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-[var(--border-light)] flex items-center gap-2">
+                  <span className="text-lg">🏆</span>
+                  <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+                    Projets mieux classés (Top 3)
+                  </h2>
+                </div>
+                {!statsToShow ? (
+                  <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>
+                ) : statsToShow.byTopScore.length === 0 ? (
+                  <div className="p-8 text-center text-[var(--text-muted)]">Aucun Top 3 pour cette classe.</div>
+                ) : (
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold text-xs w-10">#</th>
+                        <th className="px-4 py-3 font-semibold text-xs">Projet</th>
+                        <th className="px-4 py-3 font-semibold text-xs w-16 text-center">Pts</th>
+                        <th className="px-4 py-3 font-semibold text-xs w-20 text-center">Top 1</th>
+                        <th className="px-4 py-3 font-semibold text-xs w-20 text-center">Top 2</th>
+                        <th className="px-4 py-3 font-semibold text-xs w-20 text-center">Top 3</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-light)]">
+                      {statsToShow.byTopScore.slice(0, 20).map((p, i) => (
+                        <tr key={p.project_id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
+                          <td className="px-4 py-3 text-[var(--text-muted)] font-bold">
+                            {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-[var(--text-primary)]">{p.title}</div>
+                            <div className="text-xs text-[var(--text-muted)]">{p.theme}{p.specialty ? ` · ${p.specialty}` : ''}</div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="font-bold text-[var(--text-primary)]">{p.topScore}</span>
+                          </td>
+                          <td className="px-4 py-3 text-center text-[var(--text-secondary)]">{p.top1Count}</td>
+                          <td className="px-4 py-3 text-center text-[var(--text-secondary)]">{p.top2Count}</td>
+                          <td className="px-4 py-3 text-center text-[var(--text-secondary)]">{p.top3Count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
+            <div className="text-xs text-[var(--text-muted)] bg-[var(--bg-elevated)] rounded-lg p-3 border border-[var(--border-light)]">
+              <strong>Calcul des points :</strong> #1 = 3 pts · #2 = 2 pts · #3 = 1 pt
+            </div>
+          </div>
+        )}
+
+        {showAdminTabs && activeTab === 'teams' && (
           <div className="grid grid-cols-3 gap-8">
-            {/* Colonne création classe */}
             <div className="col-span-1 space-y-6">
               <div className="glass-card-static p-6">
                 <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider mb-4">
@@ -173,7 +348,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Colonne liste étudiants */}
             <div className="col-span-2 glass-card-static rounded-xl overflow-hidden shadow-sm">
               <div className="p-6 border-b border-[var(--border-light)]">
                 <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">

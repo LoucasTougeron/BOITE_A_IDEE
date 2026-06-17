@@ -27,7 +27,8 @@ export class UsersService {
   async updateProfile(userId: string, updates: Record<string, any>) {
     const { data, error } = await this.supabase.db
       .from('users')
-      .upsert({ id: userId, ...updates })
+      .update(updates)
+      .eq('id', userId)
       .select()
       .single();
     if (error) throw error;

@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
 import { useAnimateOnMount } from '../hooks/useAnimations';
-import DashboardPage from '../pages/DashboardPage';
 
 export default function Navbar() {
   const { user, isAdmin, signOut } = useAuth();
