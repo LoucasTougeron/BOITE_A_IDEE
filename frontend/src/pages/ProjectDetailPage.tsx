@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users, ThumbsDown } from 'lucide-react';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -34,6 +34,12 @@ export default function ProjectDetailPage() {
     enabled: !!user,
   });
 
+  const { data: hasDisliked = false } = useQuery<boolean>({
+    queryKey: ['dislike', id, user?.id],
+    queryFn: () => api.get(`/projects/${id}/dislikes/me`).then((r) => r.data.disliked),
+    enabled: !!user,
+  });
+
   const voteMutation = useMutation({
     mutationFn: () => hasVoted
       ? api.delete(`/projects/${id}/votes`)
@@ -41,6 +47,18 @@ export default function ProjectDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['dislike', id, user?.id] });
+    },
+  });
+
+  const dislikeMutation = useMutation({
+    mutationFn: () => hasDisliked
+      ? api.delete(`/projects/${id}/dislikes`)
+      : api.post(`/projects/${id}/dislikes`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['dislike', id, user?.id] });
     },
   });
 
@@ -73,6 +91,7 @@ export default function ProjectDetailPage() {
   }
 
   const voteCount = project.votes?.[0]?.count ?? 0;
+  const dislikeCount = project.dislikes?.[0]?.count ?? 0;
   const canEdit = user?.id === project.creator_id || isAdmin;
   const date = new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -197,18 +216,33 @@ export default function ProjectDetailPage() {
           <div className="space-y-4">
             {/* Vote */}
             <div className="glass-card-static p-5">
-              <button
-                onClick={() => user ? voteMutation.mutate() : navigate('/login')}
-                disabled={voteMutation.isPending}
-                className={`w-full flex items-center justify-center gap-2 font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50 ${
-                  hasVoted
-                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/25 pulse-ring-active'
-                    : 'bg-gradient-to-r from-pink-500/10 to-rose-500/10 text-pink-600 border border-pink-500/20 hover:from-pink-500/20 hover:to-rose-500/20'
-                }`}
-              >
-                <Heart size={16} fill={hasVoted ? 'currentColor' : 'none'} />
-                {voteCount} Like{voteCount > 1 ? 's' : ''}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => user ? voteMutation.mutate() : navigate('/login')}
+                  disabled={voteMutation.isPending || dislikeMutation.isPending}
+                  className={`flex-1 flex items-center justify-center gap-1.5 font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50 text-sm ${
+                    hasVoted
+                      ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/25'
+                      : 'bg-gradient-to-r from-pink-500/10 to-rose-500/10 text-pink-600 border border-pink-500/20 hover:from-pink-500/20 hover:to-rose-500/20'
+                  }`}
+                >
+                  <Heart size={15} fill={hasVoted ? 'currentColor' : 'none'} />
+                  {voteCount} Like{voteCount > 1 ? 's' : ''}
+                </button>
+
+                <button
+                  onClick={() => user ? dislikeMutation.mutate() : navigate('/login')}
+                  disabled={voteMutation.isPending || dislikeMutation.isPending}
+                  className={`flex-1 flex items-center justify-center gap-1.5 font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50 text-sm ${
+                    hasDisliked
+                      ? 'bg-gradient-to-r from-gray-600 to-gray-700 text-white shadow-lg shadow-gray-600/25'
+                      : 'bg-gradient-to-r from-gray-500/10 to-gray-600/10 text-gray-600 border border-gray-500/20 hover:from-gray-500/20 hover:to-gray-600/20'
+                  }`}
+                >
+                  <ThumbsDown size={15} fill={hasDisliked ? 'currentColor' : 'none'} />
+                  {dislikeCount} Dislike{dislikeCount > 1 ? 's' : ''}
+                </button>
+              </div>
               {!user && (
                 <p className="text-center text-xs text-[var(--text-muted)] mt-2">Connectez-vous pour voter</p>
               )}

@@ -18,6 +18,8 @@ create table public.users (
   role text not null default 'user' check (role in ('user', 'admin')),
   specialty text,
   team_id uuid references public.teams(id) on delete set null,
+  points integer not null default 0,
+  level text not null default 'Nouvel arrivant',
   created_at timestamptz default now()
 );
 
@@ -122,3 +124,47 @@ create policy "budgets_select" on public.budgets for select using (true);
 create policy "budgets_insert" on public.budgets for insert with check (
   exists (select 1 from public.users where id = auth.uid() and role = 'admin')
 );
+
+-- =====================
+-- Rewards / Trophées
+-- =====================
+create table public.reward_trophies (
+  id uuid default gen_random_uuid() primary key,
+  key text not null unique,
+  title text not null,
+  description text not null,
+  category text not null check (category in ('ideas', 'votes', 'likes', 'participation')),
+  threshold integer not null,
+  rarity text not null check (rarity in ('commun', 'rare', 'epique', 'legendaire')),
+  points integer not null,
+  created_at timestamptz default now()
+);
+
+create table public.user_trophies (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  trophy_id uuid references public.reward_trophies(id) on delete cascade not null,
+  awarded_at timestamptz default now(),
+  unique (user_id, trophy_id)
+);
+
+create table public.rewards_participations (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) on delete cascade not null,
+  status text not null check (status in ('won', 'lost')),
+  prize text not null,
+  entry_data jsonb,
+  created_at timestamptz default now()
+);
+
+alter table public.reward_trophies enable row level security;
+alter table public.user_trophies enable row level security;
+alter table public.rewards_participations enable row level security;
+
+create policy "reward_trophies_select" on public.reward_trophies for select using (true);
+create policy "user_trophies_select" on public.user_trophies for select using (auth.uid() = user_id);
+create policy "user_trophies_insert" on public.user_trophies for insert with check (auth.uid() = user_id);
+create policy "user_trophies_delete" on public.user_trophies for delete using (false);
+create policy "rewards_participations_select" on public.rewards_participations for select using (auth.uid() = user_id);
+create policy "rewards_participations_insert" on public.rewards_participations for insert with check (auth.uid() = user_id);
+create policy "rewards_participations_delete" on public.rewards_participations for delete using (false);

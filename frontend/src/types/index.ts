@@ -13,6 +13,7 @@ export interface Project {
   creator_id: string;
   created_at: string;
   votes?: { count: number }[];
+  dislikes?: { count: number }[];
 }
 
 export interface Team {
