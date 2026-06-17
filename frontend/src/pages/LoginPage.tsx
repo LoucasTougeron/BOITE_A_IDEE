@@ -1,6 +1,7 @@
 import { Lightbulb, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { type FormEvent, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AlertMessage from '../components/ui/AlertMessage';
 import Button from '../components/ui/Button';
 import InputField from '../components/ui/InputField';
 import SelectField from '../components/ui/SelectField';
@@ -161,11 +162,7 @@ export default function LoginPage() {
             <InputField label="Adresse email" type="email" placeholder="prenom.nom@supdevinci.fr" value={email} onChange={setEmail} required />
             <InputField label="Mot de passe" type="password" placeholder="••••••••" value={password} onChange={setPassword} required />
 
-            {error && (
-              <div className="bg-red-50/80 backdrop-blur-sm border border-red-200/50 text-red-600 text-sm px-4 py-3 rounded-xl">
-                {error}
-              </div>
-            )}
+            {error && <AlertMessage type="error">{error}</AlertMessage>}
 
             <Button type="submit" disabled={loading} fullWidth className="mt-2">
               {loading ? 'Chargement...' : isRegister ? 'Créer mon compte' : 'Se connecter'}

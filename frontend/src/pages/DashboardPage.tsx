@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import type { Profile, Team } from '../types';
@@ -55,14 +56,12 @@ export default function DashboardPage() {
     enabled: isAdmin,
   });
 
-  // Stats globales
   const { data: globalStats } = useQuery<Stats>({
     queryKey: ['top-stats'],
     queryFn: () => api.get('/user-top-projects/stats').then(r => r.data),
     enabled: isAdmin,
   });
 
-  // Stats par classe
   const { data: teamStatsList = [] } = useQuery<TeamStats[]>({
     queryKey: ['top-stats-teams'],
     queryFn: () => api.get('/user-top-projects/stats/teams').then(r => r.data),
@@ -99,8 +98,6 @@ export default function DashboardPage() {
     return <Navigate to="/login" replace />;
   }
 
-  const showAdminTabs = isAdmin;
-
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
       <div className="max-w-6xl mx-auto px-8 py-8">
@@ -109,7 +106,7 @@ export default function DashboardPage() {
         </h1>
 
         <div className="flex gap-4 mb-8 border-b border-[var(--border-light)] pb-2">
-          {showAdminTabs && (
+          {isAdmin && (
             <button
               onClick={() => setActiveTab('votes')}
               className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'votes' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
@@ -117,7 +114,7 @@ export default function DashboardPage() {
               Votes des étudiants
             </button>
           )}
-          {showAdminTabs && (
+          {isAdmin && (
             <button
               onClick={() => setActiveTab('rankings')}
               className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'rankings' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
@@ -125,7 +122,7 @@ export default function DashboardPage() {
               Classements
             </button>
           )}
-          {showAdminTabs && (
+          {isAdmin && (
             <button
               onClick={() => setActiveTab('teams')}
               className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'teams' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
@@ -133,12 +130,12 @@ export default function DashboardPage() {
               Gestion des classes
             </button>
           )}
-          {!showAdminTabs && (
+          {!isAdmin && (
             <p className="text-sm text-[var(--text-muted)] py-2">Accès réservé à la pédagogie</p>
           )}
         </div>
 
-        {showAdminTabs && activeTab === 'votes' && (
+        {isAdmin && activeTab === 'votes' && (
           <div className="glass-card-static rounded-xl overflow-hidden shadow-sm">
             {loadingVotes ? (
               <div className="p-8 text-center text-[var(--text-muted)]">Chargement des votes...</div>
@@ -193,7 +190,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {showAdminTabs && activeTab === 'rankings' && (
+        {isAdmin && activeTab === 'rankings' && (
           <div className="space-y-8">
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-[var(--text-secondary)]">Filtrer par classe :</label>
@@ -303,7 +300,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {showAdminTabs && activeTab === 'teams' && (
+        {isAdmin && activeTab === 'teams' && (
           <div className="grid grid-cols-3 gap-8">
             <div className="col-span-1 space-y-6">
               <div className="glass-card-static p-6">
@@ -318,15 +315,13 @@ export default function DashboardPage() {
                     placeholder="Nom de la classe (ex: M2 Dev)"
                     className="input-modern w-full"
                   />
-                  <button
-                    onClick={() => {
-                      if (newTeamName.trim()) createTeamMutation.mutate(newTeamName.trim());
-                    }}
+                  <Button
+                    onClick={() => { if (newTeamName.trim()) createTeamMutation.mutate(newTeamName.trim()); }}
                     disabled={createTeamMutation.isPending || !newTeamName.trim()}
-                    className="btn-accent w-full py-2.5 text-sm"
+                    fullWidth
                   >
                     {createTeamMutation.isPending ? 'Création...' : 'Créer la classe'}
-                  </button>
+                  </Button>
                 </div>
               </div>
 

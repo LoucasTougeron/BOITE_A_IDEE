@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Award, Sparkles, Trophy, Gift, Stars, Heart, Zap, TrendingUp } from 'lucide-react';
+import { Trophy, Gift, Stars, Heart, Zap, TrendingUp } from 'lucide-react';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../hooks/useNotification';

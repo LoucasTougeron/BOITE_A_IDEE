@@ -1,32 +1,40 @@
 import type { User } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '../lib/api';
 import { supabase } from '../lib/supabase';
 import { type SignupPayload, authService } from '../services/auth.service';
+import type { Profile } from '../types';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const fetchingRef = useRef(false);
 
-  async function fetchRole() {
-    const { data } = await api.get<{ role: string }>('/users/me');
-    setIsAdmin(data?.role === 'admin');
+  async function fetchProfile() {
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
+    try {
+      const { data } = await api.get<Profile>('/users/me');
+      setProfile(data);
+      setIsAdmin(data?.role === 'admin');
+    } finally {
+      fetchingRef.current = false;
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user ?? null;
-      setUser(u);
-      if (u) fetchRole();
-      setLoading(false);
-    });
-
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchRole();
-      else setIsAdmin(false);
+      if (u) fetchProfile();
+      else {
+        setProfile(null);
+        setIsAdmin(false);
+        setLoading(false);
+      }
     });
 
     return () => listener.subscription.unsubscribe();
@@ -51,5 +59,5 @@ export function useAuth() {
 
   const signOut = () => supabase.auth.signOut();
 
-  return { user, loading, isAdmin, signIn, signUp, signOut };
+  return { user, profile, setProfile, loading, isAdmin, signIn, signUp, signOut };
 }

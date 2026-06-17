@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Heart, Save, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import AlertMessage from '../components/ui/AlertMessage';
 import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import type { Project, UserTopProject } from '../types';
@@ -17,7 +19,6 @@ export default function TopProjectsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Projets likés
   const { data: likedProjects = [], isLoading: loadingLiked } = useQuery<Project[]>({
     queryKey: ['my-liked-projects'],
     queryFn: async () => {
@@ -35,21 +36,17 @@ export default function TopProjectsPage() {
     retry: 1,
   });
 
-  // Top 3 existant
   const { data: existingTop = [] } = useQuery<UserTopProject[]>({
     queryKey: ['my-top-projects'],
     queryFn: () => api.get('/user-top-projects/me').then((r) => r.data),
     enabled: !!user,
   });
 
-  // State
   const [rankings, setRankings] = useState<Record<string, number>>({});
   const [orderedSelected, setOrderedSelected] = useState<string[]>([]);
   const [initialized, setInitialized] = useState(false);
-  // Drag state
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
-  // Initialiser depuis le top existant
   useEffect(() => {
     if (existingTop.length > 0 && !initialized) {
       const initOrder: string[] = [];
@@ -70,7 +67,6 @@ export default function TopProjectsPage() {
 
   function toggleProject(projectId: string) {
     if (rankings[projectId]) {
-      // Retirer
       const newRankings = { ...rankings };
       delete newRankings[projectId];
       const newOrder = orderedSelected.filter((id) => id !== projectId);
@@ -79,7 +75,6 @@ export default function TopProjectsPage() {
       setRankings(reRanked);
       setOrderedSelected(newOrder);
     } else {
-      // Ajouter
       const newRank = orderedSelected.length + 1;
       if (newRank > 3) return;
       setRankings((prev) => ({ ...prev, [projectId]: newRank }));
@@ -87,30 +82,22 @@ export default function TopProjectsPage() {
     }
   }
 
-  // Drag & Drop handlers
-  function onDragStart(idx: number) {
-    setDragIdx(idx);
-  }
+  function onDragStart(idx: number) { setDragIdx(idx); }
 
   function onDragOver(e: React.DragEvent, idx: number) {
     e.preventDefault();
     if (dragIdx === null || dragIdx === idx) return;
-
     const newOrder = [...orderedSelected];
     const [moved] = newOrder.splice(dragIdx, 1);
     newOrder.splice(idx, 0, moved);
-
     const reRanked: Record<string, number> = {};
     newOrder.forEach((id, i) => { reRanked[id] = i + 1; });
-
     setOrderedSelected(newOrder);
     setRankings(reRanked);
     setDragIdx(idx);
   }
 
-  function onDragEnd() {
-    setDragIdx(null);
-  }
+  function onDragEnd() { setDragIdx(null); }
 
   const saveMutation = useMutation({
     mutationFn: (newRankings: { project_id: string; rank: number }[]) =>
@@ -122,10 +109,7 @@ export default function TopProjectsPage() {
   });
 
   function handleSave() {
-    const rankingsArray = Object.entries(rankings).map(([project_id, rank]) => ({
-      project_id,
-      rank,
-    }));
+    const rankingsArray = Object.entries(rankings).map(([project_id, rank]) => ({ project_id, rank }));
     saveMutation.mutate(rankingsArray);
   }
 
@@ -134,7 +118,7 @@ export default function TopProjectsPage() {
   if (loadingLiked) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-56px)]">
-        <div className="animate-spin w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full" />
+        <div className="w-8 h-8 rounded-full border-2 border-[var(--accent-2)] border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -145,25 +129,30 @@ export default function TopProjectsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-4 py-8 page-enter">
+      {/* Header */}
       <div className="text-center mb-8">
-        <div className="text-4xl mb-2">🏆</div>
-        <h1 className="text-2xl font-bold text-gray-900">Mon Top 3</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-500/20 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
+          <Trophy size={28} className="text-yellow-500" />
+        </div>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
+          Mon Top 3
+        </h1>
+        <p className="text-[var(--text-muted)] text-sm mt-1">
           Choisis tes 3 projets préférés parmi ceux que tu as likés
         </p>
       </div>
 
-      {/* Section : Projets sélectionnés */}
+      {/* Classement actuel */}
       <section className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-          <Trophy size={16} /> Ton classement
-          <span className="text-xs text-gray-400 font-normal">(glisse pour réordonner)</span>
-        </h2>
+        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
+          <Trophy size={12} /> Ton classement
+          <span className="font-normal normal-case tracking-normal">(glisse pour réordonner)</span>
+        </p>
 
         {selectedProjects.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
-            <p className="text-gray-400 text-sm">Sélectionne des projets ci-dessous pour créer ton Top 3</p>
+          <div className="glass-card-static rounded-xl p-10 text-center border border-dashed border-[var(--border-medium)]">
+            <p className="text-[var(--text-muted)] text-sm">Sélectionne des projets ci-dessous pour créer ton Top 3</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -179,31 +168,27 @@ export default function TopProjectsPage() {
                   onDragStart={() => onDragStart(idx)}
                   onDragOver={(e) => onDragOver(e, idx)}
                   onDragEnd={onDragEnd}
-                  className={`bg-white rounded-xl border-2 p-4 flex items-center gap-3 cursor-grab active:cursor-grabbing transition-all
-                    ${isDragging ? 'border-indigo-400 shadow-lg opacity-60 scale-[1.02]' : 'border-gray-200 shadow-sm'}
-                    hover:border-indigo-300`}
+                  className={`glass-card-static rounded-xl p-4 flex items-center gap-3 cursor-grab active:cursor-grabbing transition-all
+                    ${isDragging ? 'border-[var(--accent-2)] opacity-60 scale-[1.02] shadow-[var(--shadow-elevated)]' : ''}`}
+                  style={isDragging ? { borderColor: 'var(--accent-2)' } : undefined}
                 >
-                  {/* Drag handle */}
-                  <div className="flex flex-col gap-0.5 text-gray-300 cursor-grab active:cursor-grabbing select-none">
+                  <div className="flex flex-col gap-0.5 text-[var(--text-muted)] cursor-grab select-none">
                     <span className="text-xs leading-none">⠿</span>
                     <span className="text-xs leading-none">⠿</span>
                   </div>
 
-                  {/* Rank badge */}
-                  <div className="flex-shrink-0 w-12 h-12 rounded-full border-2 border-gray-200 bg-gray-50 flex items-center justify-center text-xl">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-[var(--border-medium)] flex items-center justify-center text-xl shrink-0">
                     {rankInfo?.emoji ?? rank}
                   </div>
 
-                  {/* Project info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{project.title}</p>
-                    <p className="text-xs text-gray-400 truncate">{project.description}</p>
+                    <p className="font-semibold text-[var(--text-primary)] truncate">{project.title}</p>
+                    <p className="text-xs text-[var(--text-muted)] truncate">{project.description}</p>
                   </div>
 
-                  {/* Remove button */}
                   <button
                     onClick={() => toggleProject(project.id)}
-                    className="text-xs text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                    className="text-xs font-semibold text-red-500 hover:text-red-600 transition-colors shrink-0"
                   >
                     Retirer
                   </button>
@@ -214,34 +199,34 @@ export default function TopProjectsPage() {
         )}
       </section>
 
-      {/* Section : Projets likés disponibles */}
+      {/* Projets likés disponibles */}
       {availableProjects.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-            <Heart size={16} /> Projets likés ({availableProjects.length} disponibles)
-          </h2>
-          <div className="grid gap-2">
+          <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
+            <Heart size={12} /> Projets likés ({availableProjects.length} disponibles)
+          </p>
+          <div className="flex flex-col gap-2">
             {availableProjects.slice(0, 20).map((project) => (
               <button
                 key={project.id}
                 onClick={() => toggleProject(project.id)}
                 disabled={orderedSelected.length >= 3}
-                className="text-left bg-white rounded-xl border border-gray-200 p-3 flex items-center gap-3 hover:border-indigo-300 hover:shadow-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="glass-card text-left p-3 flex items-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-[var(--border-light)] flex items-center justify-center font-bold text-sm text-[var(--accent-2)] shrink-0">
                   {project.title.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 text-sm truncate">{project.title}</p>
-                  <p className="text-xs text-gray-400 truncate">{project.theme}</p>
+                  <p className="font-medium text-[var(--text-primary)] text-sm truncate">{project.title}</p>
+                  <p className="text-xs text-[var(--text-muted)] truncate">{project.theme}</p>
                 </div>
-                <span className="text-xs text-indigo-600 flex-shrink-0">
+                <span className="text-xs font-semibold text-[var(--accent-2)] shrink-0">
                   {orderedSelected.length < 3 ? '+ Ajouter' : 'Complet'}
                 </span>
               </button>
             ))}
             {availableProjects.length > 20 && (
-              <p className="text-xs text-gray-400 text-center py-2">
+              <p className="text-xs text-[var(--text-muted)] text-center py-2">
                 +{availableProjects.length - 20} autres projets likés
               </p>
             )}
@@ -249,41 +234,40 @@ export default function TopProjectsPage() {
         </section>
       )}
 
-      {/* Projets likés vides */}
+      {/* Aucun like */}
       {likedProjects.length === 0 && (
-        <div className="text-center py-12">
-          <Heart size={48} className="mx-auto text-gray-200 mb-3" />
-          <p className="text-gray-500 font-medium">Tu n'as encore liké aucun projet</p>
-          <button
-            onClick={() => navigate('/swipe')}
-            className="mt-4 px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
+        <div className="text-center py-16">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/10 flex items-center justify-center mx-auto mb-4">
+            <Heart size={28} className="text-[var(--text-muted)]" />
+          </div>
+          <p className="font-semibold text-[var(--text-primary)] mb-1">Tu n'as encore liké aucun projet</p>
+          <p className="text-sm text-[var(--text-muted)] mb-6">Explore les projets et like ceux qui t'inspirent.</p>
+          <Button onClick={() => navigate('/swipe')}>
             Découvrir des projets
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Barre d'action */}
       {likedProjects.length > 0 && (
-        <div className="sticky bottom-4 bg-white/80 backdrop-blur-lg rounded-2xl border border-gray-200 p-4 shadow-lg flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            {orderedSelected.length}/3 sélectionnés
-          </div>
-          <button
+        <div className="sticky bottom-4 glass-card-static rounded-2xl p-4 flex items-center justify-between">
+          <p className="text-sm text-[var(--text-muted)]">
+            <span className="font-bold text-[var(--text-primary)]">{orderedSelected.length}</span>/3 sélectionnés
+          </p>
+          <Button
             onClick={handleSave}
             disabled={!hasChanges || saveMutation.isPending}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
           >
-            <Save size={16} />
+            <Save size={15} />
             {saveMutation.isPending ? 'Sauvegarde...' : 'Sauvegarder mon Top 3'}
-          </button>
+          </Button>
         </div>
       )}
 
       {saveMutation.isError && (
-        <p className="text-center text-red-500 text-sm mt-2">
-          Erreur lors de la sauvegarde. Réessaie.
-        </p>
+        <div className="mt-4">
+          <AlertMessage type="error">Erreur lors de la sauvegarde. Réessaie.</AlertMessage>
+        </div>
       )}
     </div>
   );

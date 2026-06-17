@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users, ThumbsDown } from 'lucide-react';
+import { Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users, ThumbsDown } from 'lucide-react';
 import { useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import BackButton from '../components/ui/BackButton';
+import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
 import api from '../lib/api';
 import type { Project } from '../types';
@@ -17,11 +19,6 @@ export default function ProjectDetailPage() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const mainRef = useRef<HTMLDivElement>(null);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-
-  // Animations are handled by the RouteAnimator in App.tsx
-  // We just use refs for potential future use
 
   const { data: project, isLoading } = useQuery<Project>({
     queryKey: ['project', id],
@@ -98,13 +95,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Breadcrumb */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-5 sm:mb-6 transition-colors group"
-        >
-          <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Retour aux projets
-        </button>
+        <BackButton onClick={() => navigate(-1)} label="Retour aux projets" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start">
           {/* Main content */}
@@ -278,19 +269,23 @@ export default function ProjectDetailPage() {
             {/* Actions admin/owner */}
             {canEdit && (
               <div className="glass-card-static p-4 sm:p-5 space-y-2">
-                <button
+                <Button
+                  variant="ghost"
+                  size="md"
                   onClick={() => navigate(`/projects/${id}/edit`)}
-                  className="w-full flex items-center justify-center gap-2 text-sm btn-ghost py-3"
+                  fullWidth
                 >
                   <Pencil size={13} /> Modifier
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
+                  size="md"
                   onClick={() => { if (confirm('Supprimer ce projet ?')) deleteMutation.mutate(); }}
                   disabled={deleteMutation.isPending}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-red-500 border border-red-500/20 py-2 rounded-xl hover:bg-red-50/80 transition-all disabled:opacity-50"
+                  fullWidth
                 >
                   <Trash2 size={13} /> Supprimer
-                </button>
+                </Button>
               </div>
             )}
           </div>

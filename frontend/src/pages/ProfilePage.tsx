@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AlertMessage from '../components/ui/AlertMessage';
 import Button from '../components/ui/Button';
 import InputField from '../components/ui/InputField';
 import SelectField from '../components/ui/SelectField';
@@ -9,10 +10,9 @@ import { useAuth } from '../hooks/useAuth';
 import type { Profile } from '../types';
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile: authProfile, setProfile: setAuthProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -24,13 +24,8 @@ export default function ProfilePage() {
       navigate('/login');
       return;
     }
-    api.get('/users/me').then((res) => {
-      setProfile(res.data);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
-  }, [user, authLoading, navigate]);
+    setProfile(authProfile);
+  }, [user, authLoading, authProfile, navigate]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -44,6 +39,7 @@ export default function ProfilePage() {
         specialty: profile?.specialty,
       });
       setProfile(res.data);
+      setAuthProfile(res.data);
       setMessage({ type: 'success', text: 'Profil mis à jour avec succès.' });
     } catch {
       setMessage({ type: 'error', text: 'Erreur lors de la mise à jour du profil.' });
@@ -77,7 +73,7 @@ export default function ProfilePage() {
     }
   }
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
   }
 
@@ -94,14 +90,8 @@ export default function ProfilePage() {
       </div>
 
       {message && (
-        <div
-          className={`mb-6 p-4 rounded-xl text-sm border backdrop-blur-sm ${
-            message.type === 'success'
-              ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50'
-              : 'bg-red-50/80 text-red-700 border-red-200/50'
-          }`}
-        >
-          {message.text}
+        <div className="mb-6">
+          <AlertMessage type={message.type}>{message.text}</AlertMessage>
         </div>
       )}
 
