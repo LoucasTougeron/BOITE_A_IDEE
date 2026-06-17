@@ -1,33 +1,35 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
-export class UsersService {
+export class TeamsService {
   constructor(private supabase: SupabaseService) {}
 
   async findAll() {
     const { data, error } = await this.supabase.db
-      .from('users')
-      .select('*, teams(name)')
+      .from('teams')
+      .select('*')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data;
   }
 
-  async getProfile(userId: string) {
+  async create(name: string, userId: string) {
+    // Check if user is admin is done by RLS, but we can also do it here if needed
     const { data, error } = await this.supabase.db
-      .from('users')
-      .select('*')
-      .eq('id', userId)
+      .from('teams')
+      .insert({ name })
+      .select()
       .single();
     if (error) throw error;
     return data;
   }
 
-  async updateProfile(userId: string, updates: Record<string, any>) {
+  async delete(id: string) {
     const { data, error } = await this.supabase.db
-      .from('users')
-      .upsert({ id: userId, ...updates })
+      .from('teams')
+      .delete()
+      .eq('id', id)
       .select()
       .single();
     if (error) throw error;

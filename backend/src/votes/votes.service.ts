@@ -5,6 +5,20 @@ import { SupabaseService } from '../supabase/supabase.service';
 export class VotesService {
   constructor(private supabase: SupabaseService) {}
 
+  async getAllDetailedVotes() {
+    const { data, error } = await this.supabase.db
+      .from('votes')
+      .select(`
+        id,
+        created_at,
+        projects ( id, title, theme ),
+        users ( id, first_name, last_name, email, teams (name) )
+      `)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+  }
+
   async getCount(projectId: string) {
     const { count } = await this.supabase.db
       .from('votes')
