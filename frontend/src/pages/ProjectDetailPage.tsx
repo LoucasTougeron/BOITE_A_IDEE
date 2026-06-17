@@ -250,15 +250,13 @@ export default function ProjectDetailPage() {
                 >
                   <Pencil size={13} /> Modifier
                 </button>
-                {isAdmin && (
-                  <button
-                    onClick={() => { if (confirm('Supprimer ce projet ?')) deleteMutation.mutate(); }}
-                    disabled={deleteMutation.isPending}
-                    className="w-full flex items-center justify-center gap-2 text-sm text-red-500 border border-red-500/20 py-2 rounded-xl hover:bg-red-50/80 transition-all disabled:opacity-50"
-                  >
-                    <Trash2 size={13} /> Supprimer
-                  </button>
-                )}
+                <button
+                  onClick={() => { if (confirm('Supprimer ce projet ?')) deleteMutation.mutate(); }}
+                  disabled={deleteMutation.isPending}
+                  className="w-full flex items-center justify-center gap-2 text-sm text-red-500 border border-red-500/20 py-2 rounded-xl hover:bg-red-50/80 transition-all disabled:opacity-50"
+                >
+                  <Trash2 size={13} /> Supprimer
+                </button>
               </div>
             )}
           </div>
