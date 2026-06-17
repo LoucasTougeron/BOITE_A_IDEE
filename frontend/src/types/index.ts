@@ -15,6 +15,12 @@ export interface Project {
   votes?: { count: number }[];
 }
 
+export interface Team {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   first_name: string;
@@ -22,6 +28,8 @@ export interface Profile {
   email: string;
   role: 'admin' | 'user';
   specialty?: string;
+  team_id?: string;
+  teams?: { name: string };
 }
 
 export interface BudgetEntry {

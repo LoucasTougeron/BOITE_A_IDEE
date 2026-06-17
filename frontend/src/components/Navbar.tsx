@@ -82,6 +82,15 @@ export default function Navbar() {
                   >
                     <User size={14} /> Mon Profil
                   </Link>
+                  {isAdmin && (
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setDropdownOpen(false)}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)] rounded-lg transition-colors"
+                    >
+                      <LogOut size={14} className="opacity-0 w-0" /> Dashboard Pédagogie
+                    </Link>
+                  )}
                   <div className="h-px bg-[var(--border-light)] my-1" />
                   <button
                     onClick={handleSignOut}

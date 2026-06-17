@@ -1,4 +1,13 @@
 -- =====================
+-- Teams (Classes)
+-- =====================
+create table public.teams (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  created_at timestamptz default now()
+);
+
+-- =====================
 -- Users (liés à auth.users)
 -- =====================
 create table public.users (
@@ -8,6 +17,7 @@ create table public.users (
   email text,
   role text not null default 'user' check (role in ('user', 'admin')),
   specialty text,
+  team_id uuid references public.teams(id) on delete set null,
   created_at timestamptz default now()
 );
 
@@ -72,14 +82,24 @@ create table public.budgets (
 -- =====================
 -- RLS (Row Level Security)
 -- =====================
+alter table public.teams enable row level security;
 alter table public.users enable row level security;
 alter table public.projects enable row level security;
 alter table public.votes enable row level security;
 alter table public.budgets enable row level security;
 
--- Users : lecture publique, modification uniquement par le propriétaire
+-- Teams: lecture publique, écriture admin
+create policy "teams_select" on public.teams for select using (true);
+create policy "teams_all" on public.teams for all using (
+  exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+);
+
+-- Users : lecture publique, modification uniquement par le propriétaire ou admin
 create policy "users_select" on public.users for select using (true);
-create policy "users_update" on public.users for update using (auth.uid() = id);
+create policy "users_update" on public.users for update using (
+  auth.uid() = id or 
+  exists (select 1 from public.users where id = auth.uid() and role = 'admin')
+);
 
 -- Projects : lecture publique, création/modif/suppression pour authentifiés
 create policy "projects_select" on public.projects for select using (true);
