@@ -76,22 +76,22 @@ export default function ProjectFormPage() {
 
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
-      <div className="max-w-5xl mx-auto px-8 py-8">
-        <div className="mb-6">
-          <button onClick={() => navigate(-1)} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1.5 mb-4 transition-colors group">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="mb-5 sm:mb-6">
+          <button onClick={() => navigate(-1)} className="text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] flex items-center gap-1.5 mb-3 sm:mb-4 transition-colors group">
             <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Retour
           </button>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{isEdit ? 'Modifier le projet' : 'Déposer un projet'}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{isEdit ? 'Modifier le projet' : 'Déposer un projet'}</h1>
           <p className="text-[var(--text-muted)] text-sm mt-1">
             {isEdit ? 'Mettez à jour les informations de votre projet.' : 'Remplissez les informations pour soumettre votre idée.'}
           </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-3 gap-6 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-start">
             {/* Main */}
-            <div className="col-span-2 space-y-5">
-              <div className="glass-card-static p-6 space-y-5">
+            <div className="md:col-span-2 space-y-4 sm:space-y-5">
+              <div className="glass-card-static p-4 sm:p-6 space-y-4 sm:space-y-5">
                 <div>
                   <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Titre *</label>
                   <input value={form.title} onChange={set('title')} required placeholder="Un titre clair et accrocheur" className="input-modern" />
@@ -106,9 +106,9 @@ export default function ProjectFormPage() {
                 </div>
               </div>
 
-              <div className="glass-card-static p-6 space-y-5">
+              <div className="glass-card-static p-4 sm:p-6 space-y-4 sm:space-y-5">
                 <h2 className="font-semibold text-[var(--text-primary)] text-sm" style={{ fontFamily: 'var(--font-display)' }}>Classification</h2>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Thématique *</label>
                     <select value={form.theme} onChange={set('theme')} className="input-modern">
@@ -129,17 +129,19 @@ export default function ProjectFormPage() {
 
             {/* Sidebar */}
             <div className="space-y-4">
-              <div className="glass-card-static p-5 space-y-4">
+              <div className="glass-card-static p-4 sm:p-5 space-y-4">
                 <h2 className="font-semibold text-[var(--text-primary)] text-sm" style={{ fontFamily: 'var(--font-display)' }}>Informations</h2>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Statut</label>
-                  <select value={form.status} onChange={set('status')} className="input-modern">
-                    {STATUSES.map((s) => <option key={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Nom de l'équipe</label>
-                  <input value={form.team_name} onChange={set('team_name')} placeholder="ex: Team Alpha" className="input-modern" />
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Statut</label>
+                    <select value={form.status} onChange={set('status')} className="input-modern">
+                      {STATUSES.map((s) => <option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Nom de l'équipe</label>
+                    <input value={form.team_name} onChange={set('team_name')} placeholder="ex: Team Alpha" className="input-modern" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Lien livrable</label>
@@ -151,7 +153,7 @@ export default function ProjectFormPage() {
                     type="file"
                     accept=".pdf"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="w-full text-sm text-[var(--text-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-purple-500/10 file:to-pink-500/10 file:text-[var(--accent-2)] hover:file:from-purple-500/20 hover:file:to-pink-500/20 transition file:transition-colors file:cursor-pointer"
+                    className="w-full text-sm text-[var(--text-muted)] file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-purple-500/10 file:to-pink-500/10 file:text-[var(--accent-2)] hover:file:from-purple-500/20 hover:file:to-pink-500/20 transition file:transition-colors file:cursor-pointer"
                   />
                   {form.file_url && !file && (
                     <p className="mt-2 text-xs text-[var(--text-muted)]">
@@ -170,14 +172,14 @@ export default function ProjectFormPage() {
               <button
                 type="submit"
                 disabled={mutation.isPending || uploading}
-                className="btn-accent w-full flex items-center justify-center text-sm py-2.5"
+                className="btn-accent w-full flex items-center justify-center text-sm py-3"
               >
                 {uploading ? 'Upload du fichier...' : mutation.isPending ? 'Enregistrement...' : isEdit ? 'Enregistrer les modifications' : 'Déposer le projet'}
               </button>
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="w-full text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] py-2 transition-colors"
+                className="w-full text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] py-2.5 transition-colors"
               >
                 Annuler
               </button>
