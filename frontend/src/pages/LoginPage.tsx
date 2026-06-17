@@ -1,6 +1,10 @@
 import { Lightbulb, Sparkles, TrendingUp, Users } from 'lucide-react';
 import { type FormEvent, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import InputField from '../components/ui/InputField';
+import SelectField from '../components/ui/SelectField';
+import { PROMOS, SPECIALTIES } from '../constants/promos';
 import { useAuth } from '../hooks/useAuth';
 import { useAnimateOnMount, useStaggerAnimation } from '../hooks/useAnimations';
 
@@ -21,36 +25,62 @@ export default function LoginPage() {
   useAnimateOnMount(formRef, { type: 'fadeUp', delay: 0.2, duration: 0.6 });
   useStaggerAnimation(featuresRef, '> div', { type: 'fadeUp', stagger: 0.12, delay: 0.3, duration: 0.5 });
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [promo, setPromo] = useState('');
+  const [specialty, setSpecialty] = useState('');
+
+  const specialtyOptions = SPECIALTIES[promo] ?? [];
+  const specialtyRequired = specialtyOptions.length > 0;
+
+  function resetRegisterFields() {
+    setFirstName('');
+    setLastName('');
+    setPromo('');
+    setSpecialty('');
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error } = isRegister
-      ? await signUp(email, password)
-      : await signIn(email, password);
-    setLoading(false);
-    if (error) return setError(error.message);
+
+    if (isRegister) {
+      const { error } = await signUp({
+        email,
+        password,
+        first_name: firstName,
+        last_name: lastName,
+        promo,
+        specialty: specialtyRequired ? specialty : undefined,
+      });
+      setLoading(false);
+      if (error) return setError(error.message);
+    } else {
+      const { error } = await signIn(email, password);
+      setLoading(false);
+      if (error) return setError(error.message);
+    }
+
     navigate('/');
   }
 
   return (
     <div className="min-h-[calc(100vh-56px)] flex page-enter">
-      {/* Left panel - Brand */}
+      {/* Left panel */}
       <div ref={leftRef} className="hidden lg:flex flex-col justify-between w-[520px] shrink-0 relative overflow-hidden p-12">
-        {/* Gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-700 via-purple-600 to-pink-600" />
         <div className="absolute inset-0 opacity-30" style={{
           backgroundImage: 'radial-gradient(circle at 30% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(255,255,255,0.2) 0%, transparent 50%)',
         }} />
         <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black/20 to-transparent" />
-        
-        {/* Content */}
+
         <div className="relative z-10">
           <div className="flex items-center gap-2 text-white/70 text-sm font-medium mb-16">
             <Lightbulb size={16} /> Sup de Vinci
@@ -81,7 +111,7 @@ export default function LoginPage() {
         <p className="relative z-10 text-white/40 text-xs">© 2025 BAD — Boîte à Idées</p>
       </div>
 
-      {/* Right panel - Form */}
+      {/* Right panel */}
       <div className="flex-1 flex items-center justify-center px-8 py-12">
         <div ref={formRef} className="w-full max-w-sm glass-card p-8">
           <div className="mb-8">
@@ -99,28 +129,37 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Adresse email</label>
-              <input
-                type="email"
-                placeholder="prenom.nom@supdevinci.fr"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="input-modern"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Mot de passe</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="input-modern"
-              />
-            </div>
+            {isRegister && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <InputField label="Prénom" placeholder="Audrey" value={firstName} onChange={setFirstName} required />
+                  <InputField label="Nom" placeholder="Dupont" value={lastName} onChange={setLastName} required />
+                </div>
+
+                <SelectField
+                  label="Promotion"
+                  value={promo}
+                  onChange={(v) => { setPromo(v); setSpecialty(''); }}
+                  options={PROMOS.map((p) => ({ value: p, label: p }))}
+                  placeholder="Sélectionner une promo"
+                  required
+                />
+
+                {specialtyRequired && (
+                  <SelectField
+                    label="Spécialité"
+                    value={specialty}
+                    onChange={setSpecialty}
+                    options={specialtyOptions.map((s) => ({ value: s, label: s }))}
+                    placeholder="Sélectionner une spécialité"
+                    required
+                  />
+                )}
+              </>
+            )}
+
+            <InputField label="Adresse email" type="email" placeholder="prenom.nom@supdevinci.fr" value={email} onChange={setEmail} required />
+            <InputField label="Mot de passe" type="password" placeholder="••••••••" value={password} onChange={setPassword} required />
 
             {error && (
               <div className="bg-red-50/80 backdrop-blur-sm border border-red-200/50 text-red-600 text-sm px-4 py-3 rounded-xl">
@@ -128,13 +167,9 @@ export default function LoginPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-accent w-full flex items-center justify-center text-sm py-2.5 mt-2"
-            >
-              {loading ? 'Chargement...' : isRegister ? "Créer mon compte" : 'Se connecter'}
-            </button>
+            <Button type="submit" disabled={loading} fullWidth className="mt-2">
+              {loading ? 'Chargement...' : isRegister ? 'Créer mon compte' : 'Se connecter'}
+            </Button>
           </form>
 
           <div className="mt-6 text-center">
@@ -142,7 +177,7 @@ export default function LoginPage() {
               {isRegister ? 'Déjà un compte ? ' : 'Pas encore de compte ? '}
             </span>
             <button
-              onClick={() => { setIsRegister(!isRegister); setError(''); }}
+              onClick={() => { setIsRegister(!isRegister); setError(''); resetRegisterFields(); }}
               className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-80 transition-opacity"
             >
               {isRegister ? 'Se connecter' : "S'inscrire"}

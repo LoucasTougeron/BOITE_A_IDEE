@@ -13,7 +13,7 @@ export class UsersController {
   }
 
   @Put('me')
-  updateMe(@Req() req: any, @Body() body: { specialty?: string; first_name?: string; last_name?: string }) {
+  updateMe(@Req() req: any, @Body() body: { specialty?: string; promo?: string; first_name?: string; last_name?: string }) {
     return this.usersService.updateProfile(req.user.id, body);
   }
   @Get()

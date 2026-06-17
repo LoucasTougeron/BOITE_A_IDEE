@@ -89,7 +89,7 @@ export class ProjectsService {
     return data;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: any) {
     // 1. Fetch project to get creator_id and existing votes/dislikes
     const { data: project } = await this.supabase.db
       .from('projects')

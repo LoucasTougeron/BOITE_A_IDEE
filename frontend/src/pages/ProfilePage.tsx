@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import Button from '../components/ui/Button';
+import InputField from '../components/ui/InputField';
+import SelectField from '../components/ui/SelectField';
+import { PROMOS, SPECIALTIES } from '../constants/promos';
 import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import type { Profile } from '../types';
@@ -37,6 +40,7 @@ export default function ProfilePage() {
       const res = await api.put('/users/me', {
         first_name: profile?.first_name,
         last_name: profile?.last_name,
+        promo: profile?.promo,
         specialty: profile?.specialty,
       });
       setProfile(res.data);
@@ -63,12 +67,11 @@ export default function ProfilePage() {
 
     setPasswordLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
-      if (error) throw error;
+      await api.put('/auth/password', { password: passwordForm.newPassword });
       setMessage({ type: 'success', text: 'Mot de passe modifié avec succès.' });
       setPasswordForm({ newPassword: '', confirmPassword: '' });
     } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Erreur lors du changement de mot de passe.' });
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors du changement de mot de passe.' });
     } finally {
       setPasswordLoading(false);
     }
@@ -107,50 +110,37 @@ export default function ProfilePage() {
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Informations personnelles</h2>
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Prénom</label>
-              <input
-                type="text"
-                value={profile?.first_name || ''}
-                onChange={(e) => setProfile((prev) => (prev ? { ...prev, first_name: e.target.value } : prev))}
-                className="input-modern"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Nom</label>
-              <input
-                type="text"
-                value={profile?.last_name || ''}
-                onChange={(e) => setProfile((prev) => (prev ? { ...prev, last_name: e.target.value } : prev))}
-                className="input-modern"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Email</label>
-            <input
-              type="email"
-              value={profile?.email || ''}
-              disabled
-              className="input-modern"
+            <InputField
+              label="Prénom"
+              value={profile?.first_name || ''}
+              onChange={(v) => setProfile((prev) => (prev ? { ...prev, first_name: v } : prev))}
+            />
+            <InputField
+              label="Nom"
+              value={profile?.last_name || ''}
+              onChange={(v) => setProfile((prev) => (prev ? { ...prev, last_name: v } : prev))}
             />
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Spécialité</label>
-            <input
-              type="text"
+          <InputField label="Email" type="email" value={profile?.email || ''} onChange={() => {}} disabled />
+          <SelectField
+            label="Promo"
+            value={profile?.promo || ''}
+            onChange={(v) => setProfile((prev) => (prev ? { ...prev, promo: v, specialty: '' } : prev))}
+            options={PROMOS.map((p) => ({ value: p, label: p }))}
+            placeholder="Sélectionner une promo"
+          />
+          {SPECIALTIES[profile?.promo || ''] && (
+            <SelectField
+              label="Spécialité"
               value={profile?.specialty || ''}
-              onChange={(e) => setProfile((prev) => (prev ? { ...prev, specialty: e.target.value } : prev))}
-              className="input-modern"
+              onChange={(v) => setProfile((prev) => (prev ? { ...prev, specialty: v } : prev))}
+              options={SPECIALTIES[profile?.promo || ''].map((s) => ({ value: s, label: s }))}
+              placeholder="Sélectionner une spécialité"
             />
-          </div>
-          <button
-            type="submit"
-            disabled={saving}
-            className="btn-accent"
-          >
+          )}
+          <Button type="submit" disabled={saving}>
             {saving ? 'Enregistrement...' : 'Enregistrer'}
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -158,38 +148,25 @@ export default function ProfilePage() {
       <div className="glass-card-static p-6">
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Modifier le mot de passe</h2>
         <form onSubmit={handleChangePassword} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Nouveau mot de passe</label>
-            <input
-              type="password"
-              value={passwordForm.newPassword}
-              onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
-              className="input-modern"
-              required
-              minLength={6}
-              placeholder="Au moins 6 caractères"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1.5 tracking-wide uppercase">Confirmer le mot de passe</label>
-            <input
-              type="password"
-              value={passwordForm.confirmPassword}
-              onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-              className="input-modern"
-              required
-              minLength={6}
-              placeholder="Retaper le mot de passe"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={passwordLoading}
-            className="btn-accent"
-            style={{ background: 'linear-gradient(135deg, #1a0a3e, #2d1b69)' }}
-          >
+          <InputField
+            label="Nouveau mot de passe"
+            type="password"
+            placeholder="Au moins 6 caractères"
+            value={passwordForm.newPassword}
+            onChange={(v) => setPasswordForm((prev) => ({ ...prev, newPassword: v }))}
+            required
+          />
+          <InputField
+            label="Confirmer le mot de passe"
+            type="password"
+            placeholder="Retaper le mot de passe"
+            value={passwordForm.confirmPassword}
+            onChange={(v) => setPasswordForm((prev) => ({ ...prev, confirmPassword: v }))}
+            required
+          />
+          <Button type="submit" disabled={passwordLoading}>
             {passwordLoading ? 'Modification...' : 'Changer le mot de passe'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>
