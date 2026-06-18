@@ -14,7 +14,6 @@ export interface ProposedTeamMember {
 export interface ProposedTeam {
   name: string;
   members: ProposedTeamMember[];
-  sharedProjects: string[];
 }
 
 export interface AutoGenerateResult {

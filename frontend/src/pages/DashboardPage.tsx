@@ -605,12 +605,6 @@ export default function DashboardPage() {
                                 />
                               )}
 
-                              {team.sharedProjects.length > 0 && (
-                                <p className="text-xs text-[var(--text-muted)]">
-                                  Intérêts communs : {team.sharedProjects.slice(0, 2).join(', ')}
-                                  {team.sharedProjects.length > 2 && ` +${team.sharedProjects.length - 2}`}
-                                </p>
-                              )}
                             </div>
 
                             {/* Members */}
