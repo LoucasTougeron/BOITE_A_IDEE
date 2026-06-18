@@ -1,8 +1,12 @@
+import { KeyRound, UserCircle2 } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AlertMessage from '../components/ui/AlertMessage';
 import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 import InputField from '../components/ui/InputField';
+import LoadingState from '../components/ui/LoadingState';
 import SelectField from '../components/ui/SelectField';
 import { PROMOS, SPECIALTIES } from '../constants/promos';
 import { useAuth } from '../hooks/useAuth';
@@ -76,20 +80,16 @@ export default function ProfilePage() {
   }
 
   if (authLoading) {
-    return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
+    return <LoadingState fullPage />;
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 page-enter">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
-          {user?.email?.[0].toUpperCase()}
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>Mon Profil</h1>
-          <p className="text-sm text-[var(--text-muted)]">{user?.email}</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<UserCircle2 size={24} className="text-[var(--accent-2)]" />}
+        title="Mon Profil"
+        description={user.email}
+      />
 
       {message && (
         <div className="mb-6">
@@ -97,8 +97,11 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <div className="glass-card-static p-6 mb-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Informations personnelles</h2>
+      <Card
+        title="Informations personnelles"
+        icon={<UserCircle2 size={16} />}
+        className="mb-6"
+      >
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField
@@ -133,10 +136,9 @@ export default function ProfilePage() {
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
         </form>
-      </div>
+      </Card>
 
-      <div className="glass-card-static p-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Modifier le mot de passe</h2>
+      <Card title="Modifier le mot de passe" icon={<KeyRound size={16} />}>
         <form onSubmit={handleChangePassword} className="space-y-4">
           <InputField
             label="Nouveau mot de passe"
@@ -158,7 +160,7 @@ export default function ProfilePage() {
             {passwordLoading ? 'Modification...' : 'Changer le mot de passe'}
           </Button>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

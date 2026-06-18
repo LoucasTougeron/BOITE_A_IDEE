@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Heart, X } from 'lucide-react';
+import { Heart, Shuffle, Trophy, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../hooks/useAuth';
 import { projectService } from '../services/project.service';
 import { voteService } from '../services/vote.service';
@@ -95,7 +97,7 @@ export default function SwipePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-56px)]">
-        <div className="w-80 h-[480px] bg-white rounded-2xl border border-gray-200 animate-pulse" />
+        <div className="w-80 h-[480px] glass-card-static rounded-2xl shimmer" />
       </div>
     );
   }
@@ -107,19 +109,13 @@ export default function SwipePage() {
         <p className="text-xl font-bold text-[var(--text-primary)]">Tu as tout vu !</p>
         <p className="text-[var(--text-secondary)] text-sm">Plus aucun projet à découvrir pour l'instant.</p>
         <div className="flex gap-3 mt-2">
-          <button
-            onClick={() => setIndex(0)}
-            className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-          >
+          <Button variant="ghost" onClick={() => setIndex(0)}>
             Recommencer
-          </button>
+          </Button>
           {user && (
-            <button
-              onClick={() => navigate('/top-projects')}
-              className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/20"
-            >
-              🏆 Mon Top 3
-            </button>
+            <Button onClick={() => navigate('/top-projects')}>
+              <Trophy size={15} /> Mon Top 3
+            </Button>
           )}
         </div>
       </div>
@@ -139,7 +135,15 @@ export default function SwipePage() {
       };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-8 select-none page-enter">
+    <div className="flex flex-col items-center h-[calc(100vh-56px)] select-none page-enter overflow-y-auto">
+      <div className="w-full max-w-sm px-4 pt-6">
+        <PageHeader
+          icon={<Shuffle size={24} className="text-[var(--accent-2)]" />}
+          title="Découvrir"
+          description="Swipe les projets, like ceux qui t'inspirent."
+        />
+      </div>
+      <div className="flex flex-col items-center justify-center flex-1 gap-8 w-full">
       <div className="relative w-80 h-[480px]">
         {next && (
           <div className="absolute inset-0 glass-card-static rounded-2xl shadow-md scale-95 translate-y-4" />
@@ -227,6 +231,7 @@ export default function SwipePage() {
       </div>
 
       <p className="text-xs text-[var(--text-muted)]">Glisse ou utilise les boutons</p>
+      </div>
     </div>
   );
 }

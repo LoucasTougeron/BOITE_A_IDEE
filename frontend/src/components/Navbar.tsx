@@ -1,6 +1,6 @@
 import { ChevronDown, Lightbulb, LogOut, Plus, User, LayoutDashboard } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import ThemeToggle from './ThemeToggle';
 import Button from './ui/Button';
@@ -22,9 +22,13 @@ const USER_MENU_LINKS = (isAdmin: boolean) => [
 export default function Navbar() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+
+  const isActive = (to: string) =>
+    to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
 
   useAnimateOnMount(navRef, { type: 'fadeIn', duration: 0.4 });
 
@@ -64,10 +68,12 @@ export default function Navbar() {
             <Link
               key={link.to}
               to={link.to}
-              className={`px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap ${
-                link.special 
-                  ? 'gradient-text font-semibold hover:opacity-80' 
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)]'
+              className={`px-3 py-1.5 rounded-lg transition-all duration-200 whitespace-nowrap font-medium ${
+                link.special
+                  ? 'gradient-text font-semibold hover:opacity-80'
+                  : isActive(link.to)
+                    ? 'text-[var(--text-primary)] bg-[var(--border-light)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)]'
               }`}
             >
               {link.label}
@@ -131,10 +137,12 @@ export default function Navbar() {
                 key={link.to}
                 to={link.to}
                 onClick={closeMenu}
-                className={`flex items-center gap-2 p-2 text-sm rounded-lg transition-all duration-200 ${
+                className={`flex items-center gap-2 p-2 text-sm rounded-lg transition-all duration-200 font-medium ${
                   link.special
                     ? 'gradient-text font-semibold hover:opacity-80'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)]'
+                    : isActive(link.to)
+                      ? 'text-[var(--text-primary)] bg-[var(--border-light)]'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border-light)]'
                 }`}
                 role="menuitem"
               >

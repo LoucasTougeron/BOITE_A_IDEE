@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import AlertMessage from '../components/ui/AlertMessage';
 import BackButton from '../components/ui/BackButton';
 import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 import InputField from '../components/ui/InputField';
 import SelectField from '../components/ui/SelectField';
 import TextareaField from '../components/ui/TextareaField';
@@ -108,66 +109,65 @@ export default function ProjectFormPage() {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6 items-start">
             <div className="md:col-span-2 space-y-4 sm:space-y-5">
-              <div className="glass-card-static p-4 sm:p-6 space-y-4 sm:space-y-5">
-                <InputField
-                  label="Titre"
-                  placeholder="Un titre clair et accrocheur"
-                  value={form.title}
-                  onChange={set('title')}
-                  required
-                />
-                <TextareaField
-                  label="Description"
-                  placeholder="Décrivez votre projet en quelques phrases..."
-                  value={form.description}
-                  onChange={set('description')}
-                  rows={3}
-                  required
-                />
-                <TextareaField
-                  label="Objectif"
-                  placeholder="Quel problème résout ce projet ?"
-                  value={form.objective}
-                  onChange={set('objective')}
-                  rows={3}
-                  required
-                />
-              </div>
-
-              <div className="glass-card-static p-4 sm:p-6 space-y-4 sm:space-y-5">
-                <h2 className="font-semibold text-[var(--text-primary)] text-sm" style={{ fontFamily: 'var(--font-display)' }}>
-                  Classification
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <SelectField
-                    label="Thématique"
-                    required
-                    value={form.theme}
-                    options={THEMES.map((t) => ({ value: t, label: t }))}
-                    onChange={(v) => setForm((f) => ({ ...f, theme: v }))}
-                  />
+              <Card title="Information sur le projet">
+                <div className="space-y-4">
                   <InputField
-                    label="Spécialité"
-                    placeholder="ex: Data, Cybersécurité..."
-                    value={form.specialty}
-                    onChange={set('specialty')}
+                    label="Titre"
+                    placeholder="Un titre clair et accrocheur"
+                    value={form.title}
+                    onChange={set('title')}
+                    required
+                  />
+                  <TextareaField
+                    label="Description"
+                    placeholder="Décrivez votre projet en quelques phrases..."
+                    value={form.description}
+                    onChange={set('description')}
+                    rows={3}
+                    required
+                  />
+                  <TextareaField
+                    label="Objectif"
+                    placeholder="Quel problème résout ce projet ?"
+                    value={form.objective}
+                    onChange={set('objective')}
+                    rows={3}
+                    required
                   />
                 </div>
-                <InputField
-                  label="Tags"
-                  hint="(séparés par des virgules)"
-                  placeholder="ex: IA, web, blockchain, data"
-                  value={form.tags}
-                  onChange={set('tags')}
-                />
-              </div>
+              </Card>
+
+              <Card title="Classification">
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <SelectField
+                      label="Thématique"
+                      required
+                      value={form.theme}
+                      options={THEMES.map((t) => ({ value: t, label: t }))}
+                      onChange={(v) => setForm((f) => ({ ...f, theme: v }))}
+                    />
+                    <InputField
+                      label="Spécialité"
+                      placeholder="ex: Data, Cybersécurité..."
+                      value={form.specialty}
+                      onChange={set('specialty')}
+                    />
+                  </div>
+                  <InputField
+                    label="Tags"
+                    hint="(séparés par des virgules)"
+                    placeholder="ex: IA, web, blockchain, data"
+                    value={form.tags}
+                    onChange={set('tags')}
+                  />
+                </div>
+              </Card>
             </div>
 
             <div className="space-y-4">
-              <div className="glass-card-static p-4 sm:p-5 space-y-4">
-                <h2 className="font-semibold text-[var(--text-primary)] text-sm" style={{ fontFamily: 'var(--font-display)' }}>
-                  Informations
-                </h2>
+              <Card title="Informations">
+                <div className="space-y-4">
                 <SelectField
                   label="Statut"
                   value={form.status}
@@ -206,7 +206,8 @@ export default function ProjectFormPage() {
                     </p>
                   )}
                 </div>
-              </div>
+                </div>
+              </Card>
 
               {(uploadError || mutation.isError) && (
                 <AlertMessage type="error">
