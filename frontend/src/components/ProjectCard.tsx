@@ -1,4 +1,4 @@
-import { ArrowUpRight, Heart, Users } from 'lucide-react';
+import { ArrowUpRight, Heart, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Project } from '../types';
 
@@ -12,6 +12,21 @@ interface Props {
   project: Project;
 }
 
+function scoreColor(score: number): string {
+  if (score >= 75) return 'from-emerald-500 to-teal-500';
+  if (score >= 50) return 'from-yellow-500 to-orange-500';
+  return 'from-slate-400 to-slate-500';
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  const color = scoreColor(score);
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-gradient-to-r ${color} text-white`}>
+      <Sparkles size={10} /> {score}
+    </span>
+  );
+}
+
 export default function ProjectCard({ project }: Props) {
   const navigate = useNavigate();
   const voteCount = project.votes?.[0]?.count ?? 0;
@@ -22,9 +37,12 @@ export default function ProjectCard({ project }: Props) {
       className="glass-card p-5 cursor-pointer flex flex-col group"
     >
       <div className="flex items-center justify-between mb-3">
-        <span className={`theme-badge theme-badge-${project.theme.toLowerCase()}`}>
-          {project.theme}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={`theme-badge theme-badge-${project.theme.toLowerCase()}`}>
+            {project.theme}
+          </span>
+          {project.final_score != null && <ScoreBadge score={project.final_score} />}
+        </div>
         <span className={`badge badge-${project.status}`}>
           {STATUS_LABEL[project.status] ?? project.status}
         </span>

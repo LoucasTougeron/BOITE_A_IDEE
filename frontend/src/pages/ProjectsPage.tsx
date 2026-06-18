@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Filter, FolderOpen, LayoutGrid, List, Plus, Search, Shuffle, X } from 'lucide-react';
+import { Filter, FolderOpen, LayoutGrid, List, Plus, Search, Shuffle, Sparkles, X } from 'lucide-react';
 import InputField from '../components/ui/InputField';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -32,11 +32,13 @@ export default function ProjectsPage() {
   const [status, setStatus] = useState('');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'score'>('date');
 
   const filters = {
     ...(search && { search }),
     ...(theme && { theme }),
     ...(status && { status }),
+    ...(sortBy === 'score' && { sortBy: 'score' }),
   };
 
   const { data: projects = [], isLoading } = useQuery<Project[]>({
@@ -144,6 +146,12 @@ export default function ProjectsPage() {
                 </button>
                 <button onClick={handleRandom} className="btn-ghost flex items-center gap-1.5 text-sm">
                   <Shuffle size={14} /> Aléatoire
+                </button>
+                <button
+                  onClick={() => setSortBy(sortBy === 'score' ? 'date' : 'score')}
+                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border transition-all ${sortBy === 'score' ? 'border-purple-500/40 bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-[var(--accent-2)] font-semibold' : 'border-[var(--border-light)] text-[var(--text-secondary)] hover:bg-[var(--border-light)]'}`}
+                >
+                  <Sparkles size={14} /> Score
                 </button>
                 <div className="flex border border-[var(--border-light)] rounded-xl overflow-hidden bg-[var(--bg-glass)]">
                   <button onClick={() => setView('grid')} className={`px-2.5 py-2 transition-colors ${view === 'grid' ? 'text-[var(--accent-2)] bg-[var(--border-light)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}>
