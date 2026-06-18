@@ -52,9 +52,19 @@ create table public.projects (
   specialty text,
   status text not null default 'idea' check (status in ('idea', 'in_progress', 'completed')),
   creator_id uuid references public.users(id) on delete set null,
+  ai_score float default null,
+  completeness_score float default null,
+  score_reasoning text default null,
+  score_updated_at timestamptz default null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Migration pour ajouter les colonnes de scoring sur une DB existante :
+-- ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS ai_score float;
+-- ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS completeness_score float;
+-- ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS score_reasoning text;
+-- ALTER TABLE public.projects ADD COLUMN IF NOT EXISTS score_updated_at timestamptz;
 
 -- =====================
 -- Votes

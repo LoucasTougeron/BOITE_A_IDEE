@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { VotesModule } from './votes/votes.module';
 
 import { TeamsModule } from './teams/teams.module';
+import { ScoringModule } from './scoring/scoring.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TeamsModule } from './teams/teams.module';
     RewardsModule,
     TeamsModule,
     UserTopProjectsModule,
+    ScoringModule,
   ],
 })
 export class AppModule {}
