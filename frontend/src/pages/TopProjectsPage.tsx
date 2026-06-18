@@ -2,8 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Heart, Save, Trophy } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Button from '../components/ui/Button';
 import AlertMessage from '../components/ui/AlertMessage';
+import Button from '../components/ui/Button';
+import EmptyState from '../components/ui/EmptyState';
+import LoadingState from '../components/ui/LoadingState';
+import PageHeader from '../components/ui/PageHeader';
+import SectionTitle from '../components/ui/SectionTitle';
 import { useAuth } from '../hooks/useAuth';
 import { topProjectService } from '../services/topProject.service';
 import { voteService } from '../services/vote.service';
@@ -104,11 +108,7 @@ export default function TopProjectsPage() {
   const hasChanges = Object.keys(rankings).length > 0;
 
   if (loadingLiked) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-56px)]">
-        <div className="w-8 h-8 rounded-full border-2 border-[var(--accent-2)] border-t-transparent animate-spin" />
-      </div>
-    );
+    return <LoadingState fullPage text="Chargement de tes projets likés..." />;
   }
 
   if (!user) {
@@ -118,28 +118,24 @@ export default function TopProjectsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 page-enter">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-amber-500/20 border border-yellow-500/20 flex items-center justify-center mx-auto mb-4">
-          <Trophy size={28} className="text-yellow-500" />
-        </div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
-          Mon Top 3
-        </h1>
-        <p className="text-[var(--text-muted)] text-sm mt-1">
-          Choisis tes 3 projets préférés parmi ceux que tu as likés
-        </p>
-      </div>
+      <PageHeader
+        icon={<Trophy size={24} className="text-yellow-500" />}
+        title="Mon Top 3"
+        description="Choisis tes 3 projets préférés parmi ceux que tu as likés."
+      />
 
       <section className="mb-8">
-        <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
-          <Trophy size={12} /> Ton classement
-          <span className="font-normal normal-case tracking-normal">(glisse pour réordonner)</span>
-        </p>
+        <SectionTitle icon={<Trophy size={12} />} note="(glisse pour réordonner)" className="mb-3">
+          Ton classement
+        </SectionTitle>
 
         {selectedProjects.length === 0 ? (
-          <div className="glass-card-static rounded-xl p-10 text-center border border-dashed border-[var(--border-medium)]">
-            <p className="text-[var(--text-muted)] text-sm">Sélectionne des projets ci-dessous pour créer ton Top 3</p>
-          </div>
+          <EmptyState
+            emoji="🏆"
+            title="Ton top 3 est vide"
+            description="Sélectionne des projets ci-dessous pour créer ton classement"
+            dashed
+          />
         ) : (
           <div className="space-y-2">
             {selectedProjects.map((project, idx) => {
@@ -187,9 +183,9 @@ export default function TopProjectsPage() {
 
       {availableProjects.length > 0 && (
         <section className="mb-8">
-          <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Heart size={12} /> Projets likés ({availableProjects.length} disponibles)
-          </p>
+          <SectionTitle icon={<Heart size={12} />} note={`(${availableProjects.length} disponibles)`} className="mb-3">
+            Projets likés
+          </SectionTitle>
           <div className="flex flex-col gap-2">
             {availableProjects.slice(0, 20).map((project) => (
               <button
@@ -220,16 +216,13 @@ export default function TopProjectsPage() {
       )}
 
       {likedProjects.length === 0 && (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500/10 to-rose-500/10 border border-pink-500/10 flex items-center justify-center mx-auto mb-4">
-            <Heart size={28} className="text-[var(--text-muted)]" />
-          </div>
-          <p className="font-semibold text-[var(--text-primary)] mb-1">Tu n'as encore liké aucun projet</p>
-          <p className="text-sm text-[var(--text-muted)] mb-6">Explore les projets et like ceux qui t'inspirent.</p>
-          <Button onClick={() => navigate('/swipe')}>
-            Découvrir des projets
-          </Button>
-        </div>
+        <EmptyState
+          icon={<Heart size={28} className="text-[var(--text-muted)]" />}
+          title="Tu n'as encore liké aucun projet"
+          description="Explore les projets et like ceux qui t'inspirent."
+          action={<Button onClick={() => navigate('/swipe')}>Découvrir des projets</Button>}
+          dashed
+        />
       )}
 
       {likedProjects.length > 0 && (

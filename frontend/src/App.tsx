@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ToastNotifications from './components/ToastNotifications';
+import LoadingState from './components/ui/LoadingState';
 import { AuthContext, useAuth, useAuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import LoginPage from './pages/LoginPage';
@@ -16,20 +17,16 @@ import TopProjectsPage from './pages/TopProjectsPage';
 
 const queryClient = new QueryClient();
 
-function LoadingFallback() {
-  return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
-}
-
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
-  if (loading) return <LoadingFallback />;
+  if (loading) return <LoadingState />;
   if (!profile) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
-  if (loading) return <LoadingFallback />;
+  if (loading) return <LoadingState />;
   if (profile) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

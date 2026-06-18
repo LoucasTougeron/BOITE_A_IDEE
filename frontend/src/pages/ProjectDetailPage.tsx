@@ -78,8 +78,10 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center page-enter">
-        <p className="text-[var(--text-muted)]">Projet introuvable.</p>
-        <button onClick={() => navigate('/')} className="mt-4 text-sm font-semibold gradient-text hover:opacity-80 transition-opacity">Retour à l'accueil</button>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/10 flex items-center justify-center mb-4 text-3xl">🔍</div>
+        <p className="font-semibold text-[var(--text-primary)] mb-1">Projet introuvable</p>
+        <p className="text-sm text-[var(--text-muted)] mb-6">Ce projet n'existe pas ou a été supprimé.</p>
+        <Button variant="ghost" onClick={() => navigate('/')}>Retour à l'accueil</Button>
       </div>
     );
   }

@@ -1,7 +1,10 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Heart, X } from 'lucide-react';
+import { Heart, Shuffle, Trophy, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import EmptyState from '../components/ui/EmptyState';
+import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../hooks/useAuth';
 import { projectService } from '../services/project.service';
 import { voteService } from '../services/vote.service';
@@ -36,14 +39,13 @@ export default function SwipePage() {
   const next = projects[index + 1];
 
   useEffect(() => {
-    if (leaving) {
-      const t = setTimeout(() => {
-        setLeaving(null);
-        setDragX(0);
-        setIndex((i) => i + 1);
-      }, 300);
-      return () => clearTimeout(t);
-    }
+    if (!leaving) return;
+    const t = setTimeout(() => {
+      setLeaving(null);
+      setDragX(0);
+      setIndex((i) => i + 1);
+    }, 280);
+    return () => clearTimeout(t);
   }, [leaving]);
 
   function onPointerDown(e: React.PointerEvent) {
@@ -72,9 +74,7 @@ export default function SwipePage() {
     try {
       await voteService.vote(current.id);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-    } catch {
-      // vote already exists
-    }
+    } catch { /* already voted */ }
   }
 
   async function triggerPass() {
@@ -83,150 +83,175 @@ export default function SwipePage() {
     try {
       await voteService.dislike(current.id);
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-    } catch {
-      // dislike already exists
-    }
+    } catch { /* already disliked */ }
   }
 
-  const rotation = dragX / 15;
+  const rotation = dragX / 18;
   const likeOpacity = Math.min(1, Math.max(0, dragX / SWIPE_THRESHOLD));
   const passOpacity = Math.min(1, Math.max(0, -dragX / SWIPE_THRESHOLD));
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-56px)]">
-        <div className="w-80 h-[480px] bg-white rounded-2xl border border-gray-200 animate-pulse" />
+        <div className="w-full max-w-sm mx-4 h-[460px] glass-card-static rounded-2xl shimmer" />
       </div>
     );
   }
 
   if (!current || index >= projects.length) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-4">
-        <div className="w-20 h-20 bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-full flex items-center justify-center text-4xl">🎉</div>
-        <p className="text-xl font-bold text-[var(--text-primary)]">Tu as tout vu !</p>
-        <p className="text-[var(--text-secondary)] text-sm">Plus aucun projet à découvrir pour l'instant.</p>
-        <div className="flex gap-3 mt-2">
-          <button
-            onClick={() => setIndex(0)}
-            className="px-5 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-          >
-            Recommencer
-          </button>
-          {user && (
-            <button
-              onClick={() => navigate('/top-projects')}
-              className="px-5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity shadow-lg shadow-indigo-500/20"
-            >
-              🏆 Mon Top 3
-            </button>
-          )}
-        </div>
+      <div className="flex flex-col h-[calc(100vh-56px)] items-center justify-center px-4 page-enter">
+        <EmptyState
+          emoji="🎉"
+          title="Tu as tout vu !"
+          description="Plus aucun projet à découvrir pour l'instant."
+          action={
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setIndex(0)}>
+                <Shuffle size={15} /> Recommencer
+              </Button>
+              {user && (
+                <Button onClick={() => navigate('/top-projects')}>
+                  <Trophy size={15} /> Mon Top 3
+                </Button>
+              )}
+            </div>
+          }
+        />
       </div>
     );
   }
 
   const cardStyle = leaving
     ? {
-        transform: `translateX(${leaving === 'right' ? 500 : -500}px) rotate(${leaving === 'right' ? 20 : -20}deg)`,
+        transform: `translateX(${leaving === 'right' ? 480 : -480}px) rotate(${leaving === 'right' ? 18 : -18}deg)`,
         opacity: 0,
-        transition: 'transform 0.3s ease, opacity 0.3s ease',
+        transition: 'transform 0.28s ease, opacity 0.28s ease',
       }
     : {
         transform: `translateX(${dragX}px) rotate(${rotation}deg)`,
-        transition: dragging ? 'none' : 'transform 0.3s ease',
+        transition: dragging ? 'none' : 'transform 0.25s ease',
         cursor: dragging ? 'grabbing' : 'grab',
       };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[calc(100vh-56px)] gap-8 select-none page-enter">
-      <div className="relative w-80 h-[480px]">
-        {next && (
-          <div className="absolute inset-0 glass-card-static rounded-2xl shadow-md scale-95 translate-y-4" />
-        )}
+    <div className="flex flex-col h-[calc(100vh-56px)] page-enter select-none overflow-hidden">
 
-        <div
-          ref={cardRef}
-          style={cardStyle}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
-          className="absolute inset-0 glass-card-static rounded-2xl shadow-xl flex flex-col p-6 overflow-hidden"
-        >
-          <div
-            style={{ opacity: likeOpacity }}
-            className="absolute top-8 left-6 border-4 border-emerald-500 text-emerald-500 font-black text-2xl px-3 py-1 rounded-xl rotate-[-20deg] pointer-events-none"
-          >
-            LIKE
-          </div>
+      {/* Header compact */}
+      <div className="px-4 sm:px-8 pt-5 pb-2 shrink-0 flex justify-center">
+        <div className="w-full max-w-sm">
+          <PageHeader
+            icon={<Shuffle size={22} className="text-[var(--accent-2)]" />}
+            title="Découvrir"
+            description={`Projet ${index + 1} sur ${projects.length} — swipe pour explorer`}
+          />
+        </div>
+      </div>
 
-          <div
-            style={{ opacity: passOpacity }}
-            className="absolute top-8 right-6 border-4 border-red-400 text-red-400 font-black text-2xl px-3 py-1 rounded-xl rotate-[20deg] pointer-events-none"
-          >
-            PASS
-          </div>
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 px-4 pb-6 min-h-0">
 
-          <div className="flex items-center justify-between mb-4">
-            <span className={`theme-badge theme-badge-${current.theme.toLowerCase()}`}>
-              {current.theme}
-            </span>
-            <span className={`badge badge-${current.status}`}>
-              {STATUS_LABEL[current.status] ?? current.status}
-            </span>
-          </div>
+        {/* Hint */}
+        <p className="text-sm text-[var(--text-muted)] text-center">
+          Glisse à <span className="text-emerald-500 font-semibold">droite</span> pour liker, à <span className="text-red-400 font-semibold">gauche</span> pour passer
+        </p>
 
-          <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2 leading-snug" style={{ fontFamily: 'var(--font-display)' }}>
-            {current.title}
-          </h2>
-          <p className="text-[var(--text-secondary)] text-sm leading-relaxed flex-1 line-clamp-5">
-            {current.description}
-          </p>
-
-          {current.objective && (
-            <div className="mt-4 bg-[var(--bg-elevated)] border border-[var(--border-light)] rounded-xl p-3">
-              <p className="text-xs font-semibold text-[var(--text-primary)] mb-1">Objectif</p>
-              <p className="text-xs text-[var(--text-secondary)] line-clamp-3">{current.objective}</p>
-            </div>
+        {/* Card stack */}
+        <div className="relative w-full max-w-sm" style={{ height: 'min(460px, calc(100vh - 340px))' }}>
+          {next && (
+            <div className="absolute inset-0 glass-card-static rounded-2xl scale-[0.96] translate-y-3 opacity-50" />
           )}
 
-          <div className="flex flex-wrap gap-1 mt-4">
-            {current.tags?.slice(0, 4).map((tag) => (
-              <span key={tag} className="tag-pill">#{tag}</span>
-            ))}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-[var(--border-light)] flex items-center justify-between">
-            <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
-              <Heart size={12} /> {current.votes?.[0]?.count ?? 0} likes
-            </span>
-            <button
-              onClick={(e) => { e.stopPropagation(); navigate(`/projects/${current.id}`); }}
-              className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-80 transition-opacity"
+          {/* Wrapper qui suit le mouvement de la carte */}
+          <div
+            ref={cardRef}
+            style={cardStyle}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={onPointerUp}
+            className="absolute inset-0"
+          >
+            {/* Carte avec flou */}
+            <div
+              className="absolute inset-0 glass-card-static rounded-2xl shadow-[var(--shadow-elevated)] flex flex-col p-6 overflow-hidden"
+              style={{ filter: Math.max(likeOpacity, passOpacity) > 0 ? `blur(${Math.max(likeOpacity, passOpacity) * 4}px)` : undefined }}
             >
-              Voir le projet →
+              {/* Badges */}
+              <div className="flex items-center justify-between mb-4">
+                <span className={`theme-badge theme-badge-${current.theme.toLowerCase()}`}>{current.theme}</span>
+                <span className={`badge badge-${current.status}`}>{STATUS_LABEL[current.status] ?? current.status}</span>
+              </div>
+
+              {/* Titre + description */}
+              <h2 className="text-2xl font-bold text-[var(--text-primary)] leading-snug mb-3" style={{ fontFamily: 'var(--font-display)' }}>
+                {current.title}
+              </h2>
+              <p className="text-sm text-[var(--text-secondary)] leading-relaxed flex-1 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 8, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {current.description}
+              </p>
+
+              {/* Tags */}
+              {current.tags && current.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {current.tags.slice(0, 5).map((tag) => (
+                    <span key={tag} className="tag-pill text-xs px-2.5 py-1">#{tag}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* Footer */}
+              <div className="mt-4 pt-4 border-t border-[var(--border-light)] flex items-center justify-between">
+                <span className="text-sm text-[var(--text-muted)] flex items-center gap-1.5">
+                  <Heart size={14} /> <span className="font-medium">{current.votes?.[0]?.count ?? 0}</span> likes
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate(`/projects/${current.id}`); }}
+                  className="text-sm font-semibold gradient-text hover:opacity-70 transition-opacity"
+                >
+                  Voir le projet →
+                </button>
+              </div>
+            </div>
+
+            {/* Stamps — dans le wrapper, pas dans la carte floue */}
+            <div
+              style={{ opacity: likeOpacity }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-2xl overflow-hidden"
+            >
+              <span className="font-black text-[clamp(4rem,18vw,7rem)] border-4 border-emerald-500 px-4 rounded-2xl leading-none -rotate-[20deg] select-none" style={{ WebkitTextStroke: '3px rgb(16,185,129)', color: 'transparent', textShadow: '0 0 60px rgba(16,185,129,0.35)' }}>
+                LIKE
+              </span>
+            </div>
+            <div
+              style={{ opacity: passOpacity }}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none rounded-2xl overflow-hidden"
+            >
+              <span className="font-black text-[clamp(4rem,18vw,7rem)] border-4 border-red-500 px-4 rounded-2xl leading-none rotate-[20deg] select-none" style={{ WebkitTextStroke: '3px rgb(248,113,113)', color: 'transparent', textShadow: '0 0 60px rgba(248,113,113,0.35)' }}>
+                PASS
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Boutons */}
+        <div className="flex flex-col items-center gap-3 shrink-0">
+          <div className="flex items-center gap-5">
+            <button
+              onClick={triggerPass}
+              className="w-20 h-20 rounded-2xl glass-card-static border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:border-red-500/30 flex items-center justify-center transition-all active:scale-90"
+            >
+              <X size={26} strokeWidth={2.5} />
+            </button>
+
+            <button
+              onClick={triggerLike}
+              className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 transition-all active:scale-90"
+            >
+              <Heart size={32} strokeWidth={2} fill="currentColor" />
             </button>
           </div>
         </div>
       </div>
-
-      <div className="flex items-center gap-8 mt-4">
-        <button
-          onClick={triggerPass}
-          className="w-20 h-20 rounded-full glass-card border-2 border-red-500/20 text-red-500 hover:bg-red-500/10 flex items-center justify-center shadow-lg hover:scale-105 transition-all"
-        >
-          <X size={36} strokeWidth={3} />
-        </button>
-        <button
-          onClick={triggerLike}
-          className="w-24 h-24 rounded-full bg-gradient-to-tr from-purple-600 to-pink-500 text-white hover:scale-105 flex items-center justify-center shadow-xl shadow-pink-500/25 transition-all"
-        >
-          <Heart size={44} strokeWidth={2.5} fill="currentColor" />
-        </button>
-      </div>
-
-      <p className="text-xs text-[var(--text-muted)]">Glisse ou utilise les boutons</p>
     </div>
   );
 }

@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LayoutDashboard, Plus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import InputField from '../components/ui/InputField';
+import LoadingState from '../components/ui/LoadingState';
+import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../hooks/useAuth';
 import { dashboardService } from '../services/dashboard.service';
 import { teamService } from '../services/team.service';
@@ -75,7 +80,7 @@ export default function DashboardPage() {
   });
 
   if (loading) {
-    return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
+    return <LoadingState fullPage />;
   }
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -84,9 +89,11 @@ export default function DashboardPage() {
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
       <div className="max-w-6xl mx-auto px-8 py-8">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-6" style={{ fontFamily: 'var(--font-display)' }}>
-          Dashboard Pédagogie
-        </h1>
+        <PageHeader
+          icon={<LayoutDashboard size={24} className="text-[var(--accent-2)]" />}
+          title="Dashboard"
+          description="Gestion des votes, classements et classes étudiantes."
+        />
 
         <div className="flex gap-4 mb-8 border-b border-[var(--border-light)] pb-2">
           {isAdmin ? (
@@ -109,7 +116,7 @@ export default function DashboardPage() {
         {isAdmin && activeTab === 'votes' && (
           <div className="glass-card-static rounded-xl overflow-hidden shadow-sm">
             {loadingVotes ? (
-              <div className="p-8 text-center text-[var(--text-muted)]">Chargement des votes...</div>
+              <LoadingState text="Chargement des votes..." />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -274,17 +281,13 @@ export default function DashboardPage() {
         {isAdmin && activeTab === 'teams' && (
           <div className="grid grid-cols-3 gap-8">
             <div className="col-span-1 space-y-6">
-              <div className="glass-card-static p-6">
-                <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider mb-4">
-                  Créer une classe
-                </h2>
+              <Card title="Créer une classe" icon={<Plus size={15} />}>
                 <div className="space-y-4">
-                  <input
-                    type="text"
+                  <InputField
+                    label="Nom de la classe"
+                    placeholder="ex : M2 Dev"
                     value={newTeamName}
-                    onChange={(e) => setNewTeamName(e.target.value)}
-                    placeholder="Nom de la classe (ex: M2 Dev)"
-                    className="input-modern w-full"
+                    onChange={setNewTeamName}
                   />
                   <Button
                     onClick={() => { if (newTeamName.trim()) createTeamMutation.mutate(newTeamName.trim()); }}
@@ -294,14 +297,11 @@ export default function DashboardPage() {
                     {createTeamMutation.isPending ? 'Création...' : 'Créer la classe'}
                   </Button>
                 </div>
-              </div>
+              </Card>
 
-              <div className="glass-card-static p-6">
-                <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider mb-4">
-                  Classes existantes ({teams.length})
-                </h2>
+              <Card title={`Classes existantes (${teams.length})`} icon={<Users size={15} />}>
                 {loadingTeams ? (
-                  <div className="text-sm text-[var(--text-muted)]">Chargement...</div>
+                  <LoadingState />
                 ) : (
                   <ul className="space-y-2">
                     {teams.map((t) => (
@@ -311,17 +311,16 @@ export default function DashboardPage() {
                     ))}
                   </ul>
                 )}
-              </div>
+              </Card>
             </div>
 
-            <div className="col-span-2 glass-card-static rounded-xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-[var(--border-light)]">
-                <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                  Affectation des étudiants
-                </h2>
-              </div>
+            <Card
+              title="Affectation des étudiants"
+              icon={<Users size={15} />}
+              className="col-span-2"
+            >
               {loadingUsers ? (
-                <div className="p-8 text-center text-[var(--text-muted)]">Chargement des étudiants...</div>
+                <LoadingState text="Chargement des étudiants..." />
               ) : (
                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                   <table className="w-full text-left text-sm">
@@ -342,7 +341,7 @@ export default function DashboardPage() {
                             <div className="text-xs text-[var(--text-muted)]">{u.email}</div>
                           </td>
                           <td className="px-6 py-3">
-                            <span className={`text-xs px-2 py-1 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
+                            <span className={`badge ${u.role === 'admin' ? 'badge-idea' : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-light)]'}`}>
                               {u.role === 'admin' ? 'Pédagogie' : 'Étudiant'}
                             </span>
                           </td>
@@ -365,7 +364,7 @@ export default function DashboardPage() {
                   </table>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         )}
       </div>
