@@ -6,12 +6,14 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { RewardsService } from '../rewards/rewards.service';
+import { ScoringService } from '../scoring/scoring.service';
 
 @Injectable()
 export class ProjectsService {
   constructor(
-    private supabase: SupabaseService,
-    private rewardsService: RewardsService,
+    private readonly supabase: SupabaseService,
+    private readonly rewardsService: RewardsService,
+    private readonly scoringService: ScoringService,
   ) {}
 
   async findAll(query: Record<string, string>) {
@@ -30,7 +32,14 @@ export class ProjectsService {
 
     const { data, error } = await req;
     if (error) throw error;
-    return data;
+
+    const enriched = (data ?? []).map((p) => this.scoringService.enrichWithFinalScore(p));
+
+    if (query.sortBy === 'score') {
+      enriched.sort((a, b) => b.final_score - a.final_score);
+    }
+
+    return enriched;
   }
 
   async findOne(id: string) {
@@ -40,7 +49,7 @@ export class ProjectsService {
       .eq('id', id)
       .single();
     if (error || !data) throw new NotFoundException();
-    return data;
+    return this.scoringService.enrichWithFinalScore(data);
   }
 
   async getRandom() {
@@ -61,8 +70,10 @@ export class ProjectsService {
       .single();
     if (error) throw error;
 
-    // Award +15 points to creator
     await this.rewardsService.incrementUserPoints(userId, 15);
+
+    // Fire-and-forget: score the project without blocking the response
+    this.scoringService.scoreAndUpdate(data).catch(() => {});
 
     return data;
   }
@@ -78,6 +89,12 @@ export class ProjectsService {
     delete updatePayload.created_at;
     delete updatePayload.updated_at;
     delete updatePayload.votes;
+    delete updatePayload.dislikes;
+    delete updatePayload.ai_score;
+    delete updatePayload.completeness_score;
+    delete updatePayload.score_reasoning;
+    delete updatePayload.score_updated_at;
+    delete updatePayload.final_score;
 
     const { data, error } = await this.supabase.db
       .from('projects')
@@ -86,11 +103,14 @@ export class ProjectsService {
       .select()
       .single();
     if (error) throw error;
+
+    // Fire-and-forget: re-score after content change
+    this.scoringService.scoreAndUpdate(data).catch(() => {});
+
     return data;
   }
 
   async remove(id: string, user?: any) {
-    // 1. Fetch project to get creator_id and existing votes/dislikes
     const { data: project } = await this.supabase.db
       .from('projects')
       .select('creator_id')
@@ -100,13 +120,11 @@ export class ProjectsService {
     if (project) {
       const creatorId = project.creator_id;
 
-      // Get all votes for this project
       const { data: votes } = await this.supabase.db
         .from('votes')
         .select('user_id')
         .eq('project_id', id);
 
-      // Get all dislikes for this project
       const { data: dislikes } = await this.supabase.db
         .from('dislikes')
         .select('user_id')
@@ -115,29 +133,23 @@ export class ProjectsService {
       const voterIds = votes?.map((v: any) => v.user_id) ?? [];
       const dislikerIds = dislikes?.map((d: any) => d.user_id) ?? [];
 
-      // Creator loses 15 points for project deletion
       if (creatorId) {
         await this.rewardsService.incrementUserPoints(creatorId, -15);
-        
-        // Creator loses 5 points for each like the project had
         const likeCount = voterIds.length;
         if (likeCount > 0) {
           await this.rewardsService.incrementUserPoints(creatorId, -(likeCount * 5));
         }
       }
 
-      // Voters lose 2 points because their vote is deleted
       for (const voterId of voterIds) {
         await this.rewardsService.incrementUserPoints(voterId, -2);
       }
 
-      // Dislikers lose 2 points because their dislike is deleted
       for (const dislikerId of dislikerIds) {
         await this.rewardsService.incrementUserPoints(dislikerId, -2);
       }
     }
 
-    // 2. Delete the project (cascade will delete votes and dislikes)
     const { error } = await this.supabase.db
       .from('projects')
       .delete()

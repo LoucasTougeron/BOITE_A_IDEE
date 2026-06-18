@@ -14,6 +14,11 @@ export interface Project {
   created_at: string;
   votes?: { count: number }[];
   dislikes?: { count: number }[];
+  ai_score?: number | null;
+  completeness_score?: number | null;
+  score_reasoning?: string | null;
+  score_updated_at?: string | null;
+  final_score?: number;
 }
 
 export interface Team {
