@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { CreateBudgetDto } from './dto/create-budget.dto';
 
 @Injectable()
 export class BudgetService {
@@ -14,7 +15,7 @@ export class BudgetService {
     return data;
   }
 
-  async create(projectId: string, entry: Record<string, any>) {
+  async create(projectId: string, entry: CreateBudgetDto) {
     const { data, error } = await this.supabase.db
       .from('budgets')
       .insert({ project_id: projectId, ...entry })

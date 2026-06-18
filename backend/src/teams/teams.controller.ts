@@ -1,6 +1,8 @@
-import { Controller, Get, Post, Delete, Body, Param, Req, UseGuards } from '@nestjs/common';
-import { TeamsService } from './teams.service';
+import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { TeamsService } from './teams.service';
 
 @Controller('teams')
 @UseGuards(AuthGuard)
@@ -13,11 +15,15 @@ export class TeamsController {
   }
 
   @Post()
+  @Roles('admin')
+  @UseGuards(RolesGuard)
   create(@Body() body: { name: string }, @Req() req: any) {
     return this.teamsService.create(body.name, req.user.id);
   }
 
   @Delete(':id')
+  @Roles('admin')
+  @UseGuards(RolesGuard)
   delete(@Param('id') id: string) {
     return this.teamsService.delete(id);
   }

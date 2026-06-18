@@ -89,13 +89,15 @@ export class ProjectsService {
     return data;
   }
 
-  async remove(id: string, user?: any) {
-    // 1. Fetch project to get creator_id and existing votes/dislikes
+  async remove(id: string, user: any) {
     const { data: project } = await this.supabase.db
       .from('projects')
       .select('creator_id')
       .eq('id', id)
       .single();
+
+    if (!project) throw new NotFoundException();
+    if (project.creator_id !== user.id && user.role !== 'admin') throw new ForbiddenException();
 
     if (project) {
       const creatorId = project.creator_id;

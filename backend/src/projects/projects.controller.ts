@@ -11,12 +11,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/auth.guard';
-import { Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { ProjectsService } from './projects.service';
 
 @Controller('projects')
+@UseGuards(AuthGuard)
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
@@ -36,19 +35,16 @@ export class ProjectsController {
   }
 
   @Post()
-  @UseGuards(AuthGuard)
   create(@Body() dto: CreateProjectDto, @Req() req: any) {
     return this.projectsService.create(dto, req.user.id);
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard)
   update(@Param('id') id: string, @Body() dto: Partial<CreateProjectDto>, @Req() req: any) {
     return this.projectsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
-  @UseGuards(AuthGuard)
   remove(@Param('id') id: string, @Req() req: any) {
     return this.projectsService.remove(id, req.user);
   }
