@@ -21,16 +21,16 @@ function LoadingFallback() {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { profile, loading } = useAuth();
   if (loading) return <LoadingFallback />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!profile) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { profile, loading } = useAuth();
   if (loading) return <LoadingFallback />;
-  if (user) return <Navigate to="/" replace />;
+  if (profile) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 

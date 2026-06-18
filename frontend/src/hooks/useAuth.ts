@@ -1,7 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { type SignupPayload, type AuthError, authService } from '../services/auth.service';
+import { type AuthError, type SignupPayload, authService } from '../services/auth.service';
 import { userService } from '../services/user.service';
 import type { Profile } from '../types';
 
@@ -25,8 +25,7 @@ export function useAuthProvider(): AuthContextValue {
 
   const isAdmin = profile?.role === 'admin';
 
-  const refreshProfile = async () => {
-    if (!user) return;
+  const fetchProfile = async () => {
     try {
       const data = await userService.getMe();
       setProfile(data);
@@ -35,22 +34,21 @@ export function useAuthProvider(): AuthContextValue {
     }
   };
 
+  const refreshProfile = async () => {
+    if (!user) return;
+    await fetchProfile();
+  };
+
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      
       if (u) {
-        try {
-          const data = await userService.getMe();
-          setProfile(data);
-        } catch {
-          setProfile(null);
-        }
+        await fetchProfile();
       } else {
         setProfile(null);
       }
-      
+
       setLoading(false);
     });
 

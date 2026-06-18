@@ -1,4 +1,4 @@
-import { IsArray, IsIn, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsArray, IsIn, IsOptional, IsString, IsUrl, MaxLength, ValidateIf } from 'class-validator';
 
 const VALID_THEMES = ['Tech', 'Design', 'Business', 'Social', 'Science', 'Art'];
 const VALID_STATUSES = ['idea', 'in_progress', 'completed'];
@@ -24,8 +24,8 @@ export class CreateProjectDto {
   @IsOptional()
   tags: string[];
 
+  @ValidateIf((o) => o.link != null && o.link !== '')
   @IsUrl()
-  @IsOptional()
   link?: string;
 
   @IsString()

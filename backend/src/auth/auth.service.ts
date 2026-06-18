@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SignupDto } from './dto/signup.dto';
 
@@ -23,14 +23,23 @@ export class AuthService {
     if (error) throw new BadRequestException(error.message);
     if (!data.user || !data.session) throw new BadRequestException('Signup failed');
 
+    const profile = await this.fetchProfile(data.user.id);
+
     return {
       access_token: data.session.access_token,
       refresh_token: data.session.refresh_token,
+      user: profile,
     };
   }
 
-  async updatePassword(userId: string, password: string) {
-    const { error } = await this.supabase.db.auth.admin.updateUserById(userId, { password });
-    if (error) throw new InternalServerErrorException(error.message);
+  private async fetchProfile(userId: string) {
+    const { data, error } = await this.supabase.db
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) throw new NotFoundException('Profil introuvable');
+    return data;
   }
 }
