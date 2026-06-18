@@ -1,9 +1,38 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Award, Sparkles, Trophy, Gift, Stars, Heart, Zap, TrendingUp } from 'lucide-react';
-import api from '../lib/api';
+import { Trophy, Gift, Stars, Heart, Zap, TrendingUp } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useNotification } from '../hooks/useNotification';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import LoadingState from '../components/ui/LoadingState';
+import PageHeader from '../components/ui/PageHeader';
+import ProgressBar from '../components/ui/ProgressBar';
+import StatCard from '../components/ui/StatCard';
+import { rewardService } from '../services/reward.service';
+import type { RewardData, Trophy as TrophyType } from '../types';
+
+const RARITY_COLORS: Record<string, { bg: string; text: string; badge: string; border: string }> = {
+  commun:     { bg: 'bg-[var(--bg-elevated)]', text: 'text-[var(--text-secondary)]', badge: 'bg-[var(--bg-surface)] text-[var(--text-secondary)]', border: 'border-[var(--border-medium)]'  },
+  rare:       { bg: 'bg-blue-500/10',           text: 'text-blue-400',                badge: 'bg-blue-500/20 text-blue-400',                          border: 'border-blue-500/30'            },
+  epique:     { bg: 'bg-purple-500/10',         text: 'text-purple-400',              badge: 'bg-purple-500/20 text-purple-400',                      border: 'border-purple-500/30'          },
+  legendaire: { bg: 'bg-yellow-500/10',         text: 'text-yellow-500',              badge: 'bg-yellow-500/20 text-yellow-600',                      border: 'border-yellow-500/40'          },
+};
+
+const LEVELS = [
+  { name: 'Nouvel arrivant', icon: '🌱', range: '0 - 49 points' },
+  { name: 'Explorateur',     icon: '🧭', range: '50 - 149 points' },
+  { name: 'Innovateur',      icon: '💡', range: '150 - 299 points' },
+  { name: 'Actionnaire',     icon: '📈', range: '300 - 599 points' },
+  { name: 'Directeur',       icon: '🎩', range: '600 - 999 points' },
+  { name: 'Visionnaire',     icon: '✨', range: '1000+ points' },
+];
+
+const FILTER_STYLES: Record<string, string> = {
+  all:    'bg-purple-500/20 text-purple-500',
+  earned: 'bg-emerald-500/20 text-emerald-500',
+  locked: 'bg-[var(--bg-elevated)] text-[var(--text-secondary)]',
+};
 
 export default function RewardsPage() {
   const queryClient = useQueryClient();
@@ -11,50 +40,35 @@ export default function RewardsPage() {
   const { notify } = useNotification();
   const [filter, setFilter] = useState<'all' | 'earned' | 'locked'>('all');
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery<RewardData>({
     queryKey: ['rewards'],
-    queryFn: () => api.get('/rewards/me').then((r) => r.data),
+    queryFn: () => rewardService.getMy(),
     enabled: !!user,
     refetchInterval: 5000,
   });
 
   useEffect(() => {
-    if (data?.notifications) {
-      if (data.notifications.newTrophies?.length > 0) {
-        data.notifications.newTrophies.forEach((trophy: any) => {
-          notify({
-            type: 'trophy',
-            title: `🏆 ${trophy.title}`,
-            description: trophy.description,
-          });
-        });
-      }
-      if (data.notifications.levelChanged) {
-        notify({
-          type: 'level',
-          title: `⭐ Nouveau niveau: ${data.notifications.levelChanged.level}`,
-          description: 'Vous avez atteint un nouveau palier!',
-        });
-      }
+    if (!data?.notifications) return;
+    data.notifications.newTrophies?.forEach((trophy) => {
+      notify({ type: 'trophy', title: `🏆 ${trophy.title}`, description: trophy.description });
+    });
+    if (data.notifications.levelChanged) {
+      notify({
+        type: 'level',
+        title: `⭐ Nouveau niveau: ${data.notifications.levelChanged.level}`,
+        description: 'Vous avez atteint un nouveau palier!',
+      });
     }
   }, [data?.notifications, notify]);
 
   const participateMutation = useMutation({
-    mutationFn: () => api.post('/rewards/participate'),
+    mutationFn: () => rewardService.participate(),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['rewards'] });
-      if (res.data.participation.status === 'won') {
-        notify({
-          type: 'success',
-          title: '🎉 Gagné!',
-          description: res.data.participation.prize,
-        });
+      if (res.participation.status === 'won') {
+        notify({ type: 'success', title: '🎉 Gagné!', description: res.participation.prize });
       } else {
-        notify({
-          type: 'info',
-          title: 'Participation enregistrée',
-          description: res.data.participation.prize,
-        });
+        notify({ type: 'info', title: 'Participation enregistrée', description: res.participation.prize });
       }
     },
     onError: () => {
@@ -63,174 +77,113 @@ export default function RewardsPage() {
   });
 
   if (isLoading || !data) {
-    return <div className="p-8 text-center text-[var(--text-muted)]">Chargement des récompenses...</div>;
+    return <LoadingState fullPage text="Chargement des récompenses..." />;
   }
 
-  const stats = data.stats || { ideaCount: 0, votesGivenCount: 0, totalLikes: 0, mostLikedProject: null, participationCount: 0 };
-  const progress = data.progress || [];
-  const earned = data.earned || [];
-  const allTrophies = progress;
+  const earnedIds = new Set(data.earned.map((t) => t.id));
+  const earnedTrophies = data.progress.filter((t) => earnedIds.has(t.id));
+  const lockedTrophies = data.progress.filter((t) => !earnedIds.has(t.id));
 
-  const earmarkedIds = new Set(earned.map((t: any) => t.id));
-  const earnedTrophies = allTrophies.filter((t: any) => earmarkedIds.has(t.id));
-  const lockedTrophies = allTrophies.filter((t: any) => !earmarkedIds.has(t.id));
-
-  let filteredTrophies = allTrophies;
-  if (filter === 'earned') filteredTrophies = earnedTrophies;
-  if (filter === 'locked') filteredTrophies = lockedTrophies;
-
-  const rarityColors: Record<string, { bg: string; text: string; badge: string }> = {
-    commun: { bg: 'bg-gray-50', text: 'text-gray-700', badge: 'bg-gray-200 text-gray-800' },
-    rare: { bg: 'bg-blue-50', text: 'text-blue-700', badge: 'bg-blue-200 text-blue-900' },
-    epique: { bg: 'bg-purple-50', text: 'text-purple-700', badge: 'bg-purple-200 text-purple-900' },
-    legendaire: { bg: 'bg-yellow-50', text: 'text-yellow-700', badge: 'bg-yellow-200 text-yellow-900' },
-  };
+  const filteredTrophies =
+    filter === 'earned' ? earnedTrophies :
+    filter === 'locked' ? lockedTrophies :
+    data.progress;
 
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>
-              Récompenses et trophées
-            </h1>
-            <p className="text-sm text-[var(--text-muted)] mt-1">
-              Suivez votre progression, débloquez des trophées et participez aux tirages.
-            </p>
-          </div>
-          <button
-            onClick={() => participateMutation.mutate()}
-            disabled={participateMutation.isPending}
-            className="btn-accent flex items-center gap-2 shrink-0"
-          >
-            <Gift size={16} /> Participer au tirage
-          </button>
-        </div>
+        <PageHeader
+          icon={<Trophy size={24} className="text-yellow-500" />}
+          title="Scores & Trophées"
+          description="Suivez votre progression, débloquez des trophées et participez aux tirages."
+          action={
+            <Button onClick={() => participateMutation.mutate()} disabled={participateMutation.isPending}>
+              <Gift size={16} /> Participer au tirage
+            </Button>
+          }
+        />
 
-        {/* Niveau et Points */}
-        <div className="grid gap-6 lg:grid-cols-3 mb-8">
-          <div className="lg:col-span-2 glass-card-static p-6">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-6" style={{ fontFamily: 'var(--font-display)' }}>Niveau et Progression</h2>
-
-            <div className="flex items-center justify-between mb-8 p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Votre niveau</p>
-                <p className="text-3xl font-bold text-[var(--text-primary)]">{data.level}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Points</p>
-                <p className="text-3xl font-bold text-[var(--text-primary)]">{data.points}</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-[var(--text-secondary)]">Progression vers <strong>{data.nextLevel}</strong></span>
-                <span className="text-[var(--text-muted)]">{data.pointsForNextLevel} points restants</span>
-              </div>
-              <div className="h-3 rounded-full bg-white/10 overflow-hidden">
-                <div
-                  className="h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
-                  style={{ width: `${data.progressToNextLevel}%` }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="glass-card-static p-6">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-6" style={{ fontFamily: 'var(--font-display)' }}>Résumé</h2>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]">
-                <Zap size={16} className="text-yellow-500" />
-                <div className="flex-1">
-                  <p className="text-xs text-[var(--text-muted)]">Idées postées</p>
-                  <p className="font-bold text-[var(--text-primary)]">{stats.ideaCount}</p>
+        {/* Niveau + Résumé */}
+        <div className="grid gap-6 mb-8">
+          <Card title="Niveau et Progression">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Votre niveau</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] leading-tight" style={{ fontFamily: 'var(--font-display)' }}>{data.level}</p>
+                </div>
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Points</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{data.points}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]">
-                <Heart size={16} className="text-red-500" />
-                <div className="flex-1">
-                  <p className="text-xs text-[var(--text-muted)]">Likes reçus</p>
-                  <p className="font-bold text-[var(--text-primary)]">{stats.totalLikes}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--bg-elevated)]">
-                <TrendingUp size={16} className="text-emerald-500" />
-                <div className="flex-1">
-                  <p className="text-xs text-[var(--text-muted)]">Votes donnés</p>
-                  <p className="font-bold text-[var(--text-primary)]">{stats.votesGivenCount}</p>
-                </div>
-              </div>
+              <ProgressBar
+                value={data.progressToNextLevel}
+                label={<>Progression vers <strong>{data.nextLevel}</strong></>}
+                sublabel={`${data.pointsForNextLevel} pts restants`}
+              />
             </div>
-          </div>
+          </Card>
+
+          <Card title="Résumé">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <StatCard icon={<Zap size={16} className="text-yellow-500" />} label="Idées postées" value={data.stats.ideaCount} />
+              <StatCard icon={<Heart size={16} className="text-red-500" />} label="Likes reçus" value={data.stats.totalLikes} />
+              <StatCard icon={<TrendingUp size={16} className="text-emerald-500" />} label="Votes donnés" value={data.stats.votesGivenCount} />
+            </div>
+          </Card>
         </div>
 
         {/* Post le plus liké */}
-        {stats.mostLikedProject && (
-          <div className="mb-8 glass-card-static p-6 border-l-4 border-yellow-500">
-            <div className="flex items-center gap-3 mb-2">
-              <Trophy size={18} className="text-yellow-500" />
-              <h3 className="font-semibold text-[var(--text-primary)]">Post le plus liké</h3>
-            </div>
-            <p className="text-sm text-[var(--text-secondary)]">
-              <span className="font-bold">{stats.mostLikedProject.title}</span> avec <span className="font-bold text-yellow-600">{stats.mostLikedProject.likes} ❤️</span>
+        {data.stats.mostLikedProject && (
+          <Card
+            title="Mon post le plus liké"
+            icon={<Trophy size={16} className="text-yellow-500" />}
+            className="mb-8"
+          >
+            <p className="text-sm font-bold text-[var(--text-primary)]">
+              {data.stats.mostLikedProject.title}
+              {' · '}
+              <span className="font-bold text-red-700">{data.stats.mostLikedProject.likes}❤️</span>
             </p>
-          </div>
+          </Card>
         )}
 
         {/* Trophées */}
-        <div className="glass-card-static p-6">
-          <div className="flex items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <Trophy size={20} className="text-yellow-500" />
-              <h2 className="text-lg font-semibold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>Trophées ({filteredTrophies.length})</h2>
+        <Card
+          title={`Trophées (${filteredTrophies.length})`}
+          icon={<Trophy size={16} className="text-yellow-500" />}
+          action={
+            <div className="flex gap-1 overflow-x-auto">
+              {(['all', 'earned', 'locked'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filter === f ? FILTER_STYLES[f] : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
+                  }`}
+                >
+                  {f === 'all' && `Tous (${data.progress.length})`}
+                  {f === 'earned' && `Acquis (${earnedTrophies.length})`}
+                  {f === 'locked' && `Verrouillés (${lockedTrophies.length})`}
+                </button>
+              ))}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filter === 'all'
-                    ? 'bg-purple-500/20 text-purple-600 font-medium'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
-                }`}
-              >
-                Tous ({allTrophies.length})
-              </button>
-              <button
-                onClick={() => setFilter('earned')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filter === 'earned'
-                    ? 'bg-emerald-500/20 text-emerald-600 font-medium'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
-                }`}
-              >
-                Acquis ({earnedTrophies.length})
-              </button>
-              <button
-                onClick={() => setFilter('locked')}
-                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                  filter === 'locked'
-                    ? 'bg-gray-500/20 text-gray-600 font-medium'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
-                }`}
-              >
-                Verrouillés ({lockedTrophies.length})
-              </button>
-            </div>
-          </div>
-
+          }
+          className="mb-8"
+        >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredTrophies.map((trophy: any) => {
-              const isEarned = earmarkedIds.has(trophy.id);
-              const colors = rarityColors[trophy.rarity] || rarityColors.commun;
-              const earnedData = earned.find((e: any) => e.id === trophy.id);
+            {filteredTrophies.map((trophy: TrophyType) => {
+              const isEarned = earnedIds.has(trophy.id);
+              const colors = RARITY_COLORS[trophy.rarity] ?? RARITY_COLORS.commun;
+              const earnedData = data.earned.find((e) => e.id === trophy.id);
 
               return (
                 <div
                   key={trophy.id}
                   className={`rounded-2xl border-2 p-4 transition-all ${
                     isEarned
-                      ? `${colors.bg} ${colors.text} border-${trophy.rarity === 'legendaire' ? 'yellow' : trophy.rarity === 'epique' ? 'purple' : trophy.rarity === 'rare' ? 'blue' : 'gray'}-300`
+                      ? `${colors.bg} ${colors.text} ${colors.border}`
                       : 'bg-[var(--bg-surface)] text-[var(--text-muted)] border-[var(--border-light)] opacity-50'
                   }`}
                 >
@@ -239,7 +192,7 @@ export default function RewardsPage() {
                       <p className={`font-semibold ${isEarned ? colors.text : 'text-[var(--text-muted)]'}`}>
                         {trophy.title}
                       </p>
-                      <p className={`text-xs ${isEarned ? 'opacity-75' : 'text-[var(--text-muted)]'} mt-1`}>
+                      <p className={`text-xs mt-1 ${isEarned ? 'opacity-75' : 'text-[var(--text-muted)]'}`}>
                         {trophy.description}
                       </p>
                     </div>
@@ -250,20 +203,13 @@ export default function RewardsPage() {
 
                   <div className="space-y-2 text-xs">
                     <div className="flex items-center justify-between">
-                      <span>Progression: {trophy.progress} / {trophy.threshold}</span>
-                      {isEarned && (
-                        <span className="text-yellow-600 font-bold">+{trophy.points} pts</span>
-                      )}
+                      <span>Progression : {trophy.progress} / {trophy.threshold}</span>
+                      {isEarned && <span className="text-yellow-500 font-bold">+{trophy.points} pts</span>}
                     </div>
                     {!isEarned && (
-                      <div className="h-1.5 rounded-full bg-[var(--border-light)] overflow-hidden">
-                        <div
-                          className="h-1.5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500"
-                          style={{ width: `${Math.min((trophy.progress / trophy.threshold) * 100, 100)}%` }}
-                        />
-                      </div>
+                      <ProgressBar value={(trophy.progress / trophy.threshold) * 100} size="sm" />
                     )}
-                    {isEarned && earnedData && (
+                    {isEarned && earnedData?.awarded_at && (
                       <p className="text-[var(--text-muted)]">
                         Obtenu le {new Date(earnedData.awarded_at).toLocaleDateString('fr-FR')}
                       </p>
@@ -273,36 +219,33 @@ export default function RewardsPage() {
               );
             })}
           </div>
-        </div>
+        </Card>
 
         {/* Paliers */}
-        <div className="glass-card-static p-6 mt-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Stars size={20} className="text-pink-500" />
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>Les paliers</h2>
-          </div>
+        <Card title="Les paliers" icon={<Stars size={16} className="text-pink-500" />}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              { name: 'Nouvel arrivant', icon: '🌱', range: '0 - 49 points' },
-              { name: 'Explorateur', icon: '🧭', range: '50 - 149 points' },
-              { name: 'Innovateur', icon: '💡', range: '150 - 299 points' },
-              { name: 'Actionnaire', icon: '📈', range: '300 - 599 points' },
-              { name: 'Directeur', icon: '🎩', range: '600 - 999 points' },
-              { name: 'Visionnaire', icon: '✨', range: '1000+ points' },
-            ].map((level) => (
-              <div key={level.name} className={`glass-card p-4 border rounded-xl transition-all ${data.level === level.name ? 'border-purple-500/50 bg-purple-500/10' : 'border-[var(--border-light)]'}`}>
-                <p className="text-2xl mb-2">{level.icon}</p>
-                <p className="font-semibold text-[var(--text-primary)]">{level.name}</p>
-                <p className="text-xs text-[var(--text-muted)] mt-2">{level.range}</p>
-                {data.level === level.name && (
-                  <div className="mt-2 text-xs font-semibold text-purple-600 flex items-center gap-1">
-                    ✓ Niveau actuel
-                  </div>
-                )}
-              </div>
-            ))}
+            {LEVELS.map((level) => {
+              const active = data.level === level.name;
+              return (
+                <div
+                  key={level.name}
+                  className={`glass-card p-4 rounded-xl transition-all ${
+                    active ? 'border-purple-500/40 bg-purple-500/10 !shadow-[0_0_20px_rgba(168,85,247,0.12)]' : 'border-[var(--border-light)]'
+                  }`}
+                >
+                  <p className="text-2xl mb-2">{level.icon}</p>
+                  <p className="font-semibold text-[var(--text-primary)]">{level.name}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">{level.range}</p>
+                  {active && (
+                    <p className="mt-2 text-xs font-semibold text-purple-500 flex items-center gap-1">
+                      ✓ Niveau actuel
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

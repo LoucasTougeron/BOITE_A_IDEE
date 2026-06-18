@@ -1,30 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { LayoutDashboard, Plus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import InputField from '../components/ui/InputField';
+import LoadingState from '../components/ui/LoadingState';
+import PageHeader from '../components/ui/PageHeader';
 import { useAuth } from '../hooks/useAuth';
-import api from '../lib/api';
-import type { Profile, Team } from '../types';
+import { dashboardService } from '../services/dashboard.service';
+import { teamService } from '../services/team.service';
+import { topProjectService } from '../services/topProject.service';
+import { userService } from '../services/user.service';
+import type { AdminVote, Profile, ProjectStat, Team, TeamStats } from '../types';
 
 type Tab = 'votes' | 'teams' | 'rankings';
-
-interface ProjectStat {
-  project_id: string;
-  title: string;
-  theme: string;
-  specialty: string;
-  likes: number;
-  topScore: number;
-  top1Count: number;
-  top2Count: number;
-  top3Count: number;
-}
-
-interface TeamStats {
-  team_id: string;
-  team_name: string;
-  byLikes: ProjectStat[];
-  byTopScore: ProjectStat[];
-}
 
 interface Stats {
   byLikes: ProjectStat[];
@@ -35,48 +25,45 @@ export default function DashboardPage() {
   const { user, isAdmin, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('votes');
   const [newTeamName, setNewTeamName] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const queryClient = useQueryClient();
 
-  const { data: votes = [], isLoading: loadingVotes } = useQuery({
+  const { data: votes = [], isLoading: loadingVotes } = useQuery<AdminVote[]>({
     queryKey: ['admin-votes'],
-    queryFn: () => api.get('/votes').then(r => r.data),
+    queryFn: () => dashboardService.getVotes(),
     enabled: isAdmin,
   });
 
   const { data: teams = [], isLoading: loadingTeams } = useQuery<Team[]>({
     queryKey: ['teams'],
-    queryFn: () => api.get('/teams').then(r => r.data),
+    queryFn: () => teamService.getAll(),
     enabled: isAdmin,
   });
 
   const { data: usersList = [], isLoading: loadingUsers } = useQuery<Profile[]>({
     queryKey: ['users'],
-    queryFn: () => api.get('/users').then(r => r.data),
+    queryFn: () => userService.getAll(),
     enabled: isAdmin,
   });
 
-  // Stats globales
   const { data: globalStats } = useQuery<Stats>({
     queryKey: ['top-stats'],
-    queryFn: () => api.get('/user-top-projects/stats').then(r => r.data),
+    queryFn: () => topProjectService.getGlobalStats(),
     enabled: isAdmin,
   });
 
-  // Stats par classe
   const { data: teamStatsList = [] } = useQuery<TeamStats[]>({
     queryKey: ['top-stats-teams'],
-    queryFn: () => api.get('/user-top-projects/stats/teams').then(r => r.data),
+    queryFn: () => topProjectService.getStatsByTeam(),
     enabled: isAdmin,
   });
 
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-
   const statsToShow: Stats | undefined = selectedTeamId
-    ? teamStatsList.find(t => t.team_id === selectedTeamId)
+    ? teamStatsList.find((t) => t.team_id === selectedTeamId)
     : globalStats;
 
   const createTeamMutation = useMutation({
-    mutationFn: (name: string) => api.post('/teams', { name }),
+    mutationFn: (name: string) => teamService.create(name),
     onSuccess: () => {
       setNewTeamName('');
       queryClient.invalidateQueries({ queryKey: ['teams'] });
@@ -84,8 +71,8 @@ export default function DashboardPage() {
   });
 
   const assignTeamMutation = useMutation({
-    mutationFn: ({ userId, teamId }: { userId: string; teamId: string | null }) => 
-      api.put(`/users/${userId}/team`, { team_id: teamId }),
+    mutationFn: ({ userId, teamId }: { userId: string; teamId: string | null }) =>
+      userService.assignTeam(userId, teamId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-votes'] });
@@ -93,55 +80,43 @@ export default function DashboardPage() {
   });
 
   if (loading) {
-    return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
+    return <LoadingState fullPage />;
   }
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  const showAdminTabs = isAdmin;
-
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
       <div className="max-w-6xl mx-auto px-8 py-8">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] mb-6" style={{ fontFamily: 'var(--font-display)' }}>
-          Dashboard Pédagogie
-        </h1>
+        <PageHeader
+          icon={<LayoutDashboard size={24} className="text-[var(--accent-2)]" />}
+          title="Dashboard"
+          description="Gestion des votes, classements et classes étudiantes."
+        />
 
         <div className="flex gap-4 mb-8 border-b border-[var(--border-light)] pb-2">
-          {showAdminTabs && (
-            <button
-              onClick={() => setActiveTab('votes')}
-              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'votes' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-            >
-              Votes des étudiants
-            </button>
-          )}
-          {showAdminTabs && (
-            <button
-              onClick={() => setActiveTab('rankings')}
-              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'rankings' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-            >
-              Classements
-            </button>
-          )}
-          {showAdminTabs && (
-            <button
-              onClick={() => setActiveTab('teams')}
-              className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === 'teams' ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
-            >
-              Gestion des classes
-            </button>
-          )}
-          {!showAdminTabs && (
+          {isAdmin ? (
+            <>
+              {(['votes', 'rankings', 'teams'] as Tab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === tab ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
+                >
+                  {tab === 'votes' ? 'Votes des étudiants' : tab === 'rankings' ? 'Classements' : 'Gestion des classes'}
+                </button>
+              ))}
+            </>
+          ) : (
             <p className="text-sm text-[var(--text-muted)] py-2">Accès réservé à la pédagogie</p>
           )}
         </div>
 
-        {showAdminTabs && activeTab === 'votes' && (
+        {isAdmin && activeTab === 'votes' && (
           <div className="glass-card-static rounded-xl overflow-hidden shadow-sm">
             {loadingVotes ? (
-              <div className="p-8 text-center text-[var(--text-muted)]">Chargement des votes...</div>
+              <LoadingState text="Chargement des votes..." />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -155,7 +130,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[var(--border-light)]">
-                    {votes.map((v: any) => (
+                    {votes.map((v) => (
                       <tr key={v.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                         <td className="px-6 py-4">
                           <div className="font-medium text-[var(--text-primary)]">
@@ -193,7 +168,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {showAdminTabs && activeTab === 'rankings' && (
+        {isAdmin && activeTab === 'rankings' && (
           <div className="space-y-8">
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-[var(--text-secondary)]">Filtrer par classe :</label>
@@ -203,7 +178,7 @@ export default function DashboardPage() {
                 className="input-modern text-sm py-1.5 px-3"
               >
                 <option value="">Toutes les classes</option>
-                {teams.map(t => (
+                {teams.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>
@@ -303,59 +278,49 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {showAdminTabs && activeTab === 'teams' && (
+        {isAdmin && activeTab === 'teams' && (
           <div className="grid grid-cols-3 gap-8">
             <div className="col-span-1 space-y-6">
-              <div className="glass-card-static p-6">
-                <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider mb-4">
-                  Créer une classe
-                </h2>
+              <Card title="Créer une classe" icon={<Plus size={15} />}>
                 <div className="space-y-4">
-                  <input
-                    type="text"
+                  <InputField
+                    label="Nom de la classe"
+                    placeholder="ex : M2 Dev"
                     value={newTeamName}
-                    onChange={(e) => setNewTeamName(e.target.value)}
-                    placeholder="Nom de la classe (ex: M2 Dev)"
-                    className="input-modern w-full"
+                    onChange={setNewTeamName}
                   />
-                  <button
-                    onClick={() => {
-                      if (newTeamName.trim()) createTeamMutation.mutate(newTeamName.trim());
-                    }}
+                  <Button
+                    onClick={() => { if (newTeamName.trim()) createTeamMutation.mutate(newTeamName.trim()); }}
                     disabled={createTeamMutation.isPending || !newTeamName.trim()}
-                    className="btn-accent w-full py-2.5 text-sm"
+                    fullWidth
                   >
                     {createTeamMutation.isPending ? 'Création...' : 'Créer la classe'}
-                  </button>
+                  </Button>
                 </div>
-              </div>
+              </Card>
 
-              <div className="glass-card-static p-6">
-                <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider mb-4">
-                  Classes existantes ({teams.length})
-                </h2>
+              <Card title={`Classes existantes (${teams.length})`} icon={<Users size={15} />}>
                 {loadingTeams ? (
-                  <div className="text-sm text-[var(--text-muted)]">Chargement...</div>
+                  <LoadingState />
                 ) : (
                   <ul className="space-y-2">
-                    {teams.map(t => (
+                    {teams.map((t) => (
                       <li key={t.id} className="text-sm text-[var(--text-secondary)] font-medium p-2 bg-[var(--bg-elevated)] rounded-lg border border-[var(--border-light)]">
                         {t.name}
                       </li>
                     ))}
                   </ul>
                 )}
-              </div>
+              </Card>
             </div>
 
-            <div className="col-span-2 glass-card-static rounded-xl overflow-hidden shadow-sm">
-              <div className="p-6 border-b border-[var(--border-light)]">
-                <h2 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                  Affectation des étudiants
-                </h2>
-              </div>
+            <Card
+              title="Affectation des étudiants"
+              icon={<Users size={15} />}
+              className="col-span-2"
+            >
               {loadingUsers ? (
-                <div className="p-8 text-center text-[var(--text-muted)]">Chargement des étudiants...</div>
+                <LoadingState text="Chargement des étudiants..." />
               ) : (
                 <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
                   <table className="w-full text-left text-sm">
@@ -367,7 +332,7 @@ export default function DashboardPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border-light)]">
-                      {usersList.map((u: Profile) => (
+                      {usersList.map((u) => (
                         <tr key={u.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                           <td className="px-6 py-3">
                             <div className="font-medium text-[var(--text-primary)]">
@@ -376,7 +341,7 @@ export default function DashboardPage() {
                             <div className="text-xs text-[var(--text-muted)]">{u.email}</div>
                           </td>
                           <td className="px-6 py-3">
-                            <span className={`text-xs px-2 py-1 rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
+                            <span className={`badge ${u.role === 'admin' ? 'badge-idea' : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border-light)]'}`}>
                               {u.role === 'admin' ? 'Pédagogie' : 'Étudiant'}
                             </span>
                           </td>
@@ -388,7 +353,7 @@ export default function DashboardPage() {
                               disabled={assignTeamMutation.isPending}
                             >
                               <option value="">-- Aucune --</option>
-                              {teams.map(t => (
+                              {teams.map((t) => (
                                 <option key={t.id} value={t.id}>{t.name}</option>
                               ))}
                             </select>
@@ -399,7 +364,7 @@ export default function DashboardPage() {
                   </table>
                 </div>
               )}
-            </div>
+            </Card>
           </div>
         )}
       </div>

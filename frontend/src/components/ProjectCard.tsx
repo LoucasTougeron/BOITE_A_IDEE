@@ -1,4 +1,4 @@
-import { ArrowUpRight, Heart } from 'lucide-react';
+import { ArrowUpRight, Heart, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import type { Project } from '../types';
 
@@ -48,12 +48,12 @@ export default function ProjectCard({ project }: Props) {
             <span className="text-xs text-[var(--text-muted)]">+{project.tags.length - 3}</span>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 text-[var(--text-muted)] text-xs">
-            <Heart size={13} className={voteCount > 0 ? 'text-pink-400 fill-pink-400' : ''} />
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1 text-[var(--text-muted)] text-xs">
+            <Heart size={12} className={voteCount > 0 ? 'text-pink-400 fill-pink-400' : ''} />
             <span className="font-medium">{voteCount}</span>
           </div>
-          <div className="w-6 h-6 rounded-lg bg-[var(--border-light)] flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-purple-500/20 group-hover:to-pink-500/20 transition-all">
+          <div className="w-7 h-7 rounded-lg bg-[var(--border-light)] flex items-center justify-center group-hover:bg-gradient-to-br group-hover:from-purple-500/20 group-hover:to-pink-500/20 transition-all">
             <ArrowUpRight size={14} className="text-[var(--text-muted)] group-hover:text-[var(--accent-2)] transition-colors" />
           </div>
         </div>

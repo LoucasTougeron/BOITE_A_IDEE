@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import ToastNotifications from './components/ToastNotifications';
-import { useAuth } from './hooks/useAuth';
+import LoadingState from './components/ui/LoadingState';
+import { AuthContext, useAuth, useAuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './hooks/useTheme';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
@@ -18,15 +19,23 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
+  if (loading) return <LoadingState fullPage />;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return <LoadingState fullPage />;
+  if (user) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
+  const location = useLocation();
+  
   return (
     <div className="min-h-screen flex flex-col relative">
-      {/* Ambient background */}
       <div className="ambient-bg">
         <div className="orb" />
         <div className="orb" />
@@ -34,14 +43,14 @@ function AppRoutes() {
       </div>
       <div className="grid-overlay" />
 
-      <Navbar />
+      {location.pathname !== '/login' && <Navbar />}
       <ToastNotifications />
       <main className="relative z-10 flex-1">
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={<ProjectsPage />} />
-          <Route path="/swipe" element={<SwipePage />} />
-          <Route path="/projects/:id" element={<ProjectDetailPage />} />
+          <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
+          <Route path="/" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+          <Route path="/swipe" element={<ProtectedRoute><SwipePage /></ProtectedRoute>} />
+          <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
           <Route path="/top-projects" element={<ProtectedRoute><TopProjectsPage /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/projects/new" element={<ProtectedRoute><ProjectFormPage /></ProtectedRoute>} />
@@ -55,11 +64,15 @@ function AppRoutes() {
 }
 
 function App() {
+  const auth = useAuthProvider();
+  
   return (
     <Router>
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
-          <AppRoutes />
+          <AuthContext.Provider value={auth}>
+            <AppRoutes />
+          </AuthContext.Provider>
         </QueryClientProvider>
       </ThemeProvider>
     </Router>

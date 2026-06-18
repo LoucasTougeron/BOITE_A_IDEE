@@ -1,55 +1,76 @@
 import type { User } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
-import api from '../lib/api';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { type SignupPayload, authService } from '../services/auth.service';
+import { type SignupPayload, type AuthError, authService } from '../services/auth.service';
+import { userService } from '../services/user.service';
+import type { Profile } from '../types';
 
-export function useAuth() {
+interface AuthContextValue {
+  user: User | null;
+  profile: Profile | null;
+  isAdmin: boolean;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<AuthError | null>;
+  signUp: (payload: SignupPayload) => Promise<AuthError | null>;
+  signOut: () => Promise<AuthError | null>;
+  refreshProfile: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function useAuthProvider(): AuthContextValue {
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function fetchRole() {
-    const { data } = await api.get<{ role: string }>('/users/me');
-    setIsAdmin(data?.role === 'admin');
-  }
+  const isAdmin = profile?.role === 'admin';
+
+  const refreshProfile = async () => {
+    if (!user) return;
+    try {
+      const data = await userService.getMe();
+      setProfile(data);
+    } catch {
+      setProfile(null);
+    }
+  };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const u = data.session?.user ?? null;
-      setUser(u);
-      if (u) fetchRole();
-      setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const u = session?.user ?? null;
       setUser(u);
-      if (u) fetchRole();
-      else setIsAdmin(false);
+      
+      if (u) {
+        try {
+          const data = await userService.getMe();
+          setProfile(data);
+        } catch {
+          setProfile(null);
+        }
+      } else {
+        setProfile(null);
+      }
+      
+      setLoading(false);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: { message: error.message } };
-    return { error: null };
+  return {
+    user,
+    profile,
+    isAdmin,
+    loading,
+    signIn: authService.signIn,
+    signUp: authService.signUp,
+    signOut: authService.signOut,
+    refreshProfile,
   };
+}
 
-  const signUp = async (payload: SignupPayload) => {
-    try {
-      const tokens = await authService.signup(payload);
-      await supabase.auth.setSession(tokens);
-      return { error: null };
-    } catch (err: any) {
-      const message = err?.response?.data?.message || "Erreur lors de l'inscription";
-      return { error: { message } };
-    }
-  };
-
-  const signOut = () => supabase.auth.signOut();
-
-  return { user, loading, isAdmin, signIn, signUp, signOut };
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 }

@@ -1,18 +1,22 @@
+import { KeyRound, UserCircle2 } from 'lucide-react';
+import PageHeader from '../components/ui/PageHeader';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import AlertMessage from '../components/ui/AlertMessage';
 import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
 import InputField from '../components/ui/InputField';
+import LoadingState from '../components/ui/LoadingState';
 import SelectField from '../components/ui/SelectField';
 import { PROMOS, SPECIALTIES } from '../constants/promos';
-import api from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { userService } from '../services/user.service';
 import type { Profile } from '../types';
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile: authProfile, loading: authLoading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -24,26 +28,21 @@ export default function ProfilePage() {
       navigate('/login');
       return;
     }
-    api.get('/users/me').then((res) => {
-      setProfile(res.data);
-      setLoading(false);
-    }).catch(() => {
-      setLoading(false);
-    });
-  }, [user, authLoading, navigate]);
+    setProfile(authProfile);
+  }, [user, authLoading, authProfile, navigate]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setMessage(null);
     try {
-      const res = await api.put('/users/me', {
+      await userService.updateMe({
         first_name: profile?.first_name,
         last_name: profile?.last_name,
         promo: profile?.promo,
         specialty: profile?.specialty,
       });
-      setProfile(res.data);
+      await refreshProfile();
       setMessage({ type: 'success', text: 'Profil mis à jour avec succès.' });
     } catch {
       setMessage({ type: 'error', text: 'Erreur lors de la mise à jour du profil.' });
@@ -67,47 +66,42 @@ export default function ProfilePage() {
 
     setPasswordLoading(true);
     try {
-      await api.put('/auth/password', { password: passwordForm.newPassword });
-      setMessage({ type: 'success', text: 'Mot de passe modifié avec succès.' });
+      await userService.changePassword(passwordForm.newPassword);
       setPasswordForm({ newPassword: '', confirmPassword: '' });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors du changement de mot de passe.' });
+      setMessage({ type: 'success', text: 'Mot de passe modifié avec succès.' });
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Erreur lors du changement de mot de passe.';
+      setMessage({ type: 'error', text: message });
     } finally {
       setPasswordLoading(false);
     }
   }
 
-  if (authLoading || loading) {
-    return <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>;
+  if (authLoading) {
+    return <LoadingState fullPage />;
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 page-enter">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
-          {user?.email?.[0].toUpperCase()}
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>Mon Profil</h1>
-          <p className="text-sm text-[var(--text-muted)]">{user?.email}</p>
-        </div>
-      </div>
+      <PageHeader
+        icon={<UserCircle2 size={24} className="text-[var(--accent-2)]" />}
+        title="Mon Profil"
+        description={user.email}
+      />
 
       {message && (
-        <div
-          className={`mb-6 p-4 rounded-xl text-sm border backdrop-blur-sm ${
-            message.type === 'success'
-              ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50'
-              : 'bg-red-50/80 text-red-700 border-red-200/50'
-          }`}
-        >
-          {message.text}
+        <div className="mb-6">
+          <AlertMessage type={message.type}>{message.text}</AlertMessage>
         </div>
       )}
 
-      {/* Profile Information */}
-      <div className="glass-card-static p-6 mb-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Informations personnelles</h2>
+      <Card
+        title="Informations personnelles"
+        icon={<UserCircle2 size={16} />}
+        className="mb-6"
+      >
         <form onSubmit={handleSave} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField
@@ -142,11 +136,9 @@ export default function ProfilePage() {
             {saving ? 'Enregistrement...' : 'Enregistrer'}
           </Button>
         </form>
-      </div>
+      </Card>
 
-      {/* Change Password */}
-      <div className="glass-card-static p-6">
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-4" style={{ fontFamily: 'var(--font-display)' }}>Modifier le mot de passe</h2>
+      <Card title="Modifier le mot de passe" icon={<KeyRound size={16} />}>
         <form onSubmit={handleChangePassword} className="space-y-4">
           <InputField
             label="Nouveau mot de passe"
@@ -168,7 +160,7 @@ export default function ProfilePage() {
             {passwordLoading ? 'Modification...' : 'Changer le mot de passe'}
           </Button>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }

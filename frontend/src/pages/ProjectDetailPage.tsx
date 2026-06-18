@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users, ThumbsDown } from 'lucide-react';
-import { useRef } from 'react';
+import { Calendar, Download, ExternalLink, FileText, Heart, Pencil, Tag, Trash2, Users, ThumbsDown } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import BackButton from '../components/ui/BackButton';
+import Button from '../components/ui/Button';
 import { useAuth } from '../hooks/useAuth';
-import api from '../lib/api';
+import { projectService } from '../services/project.service';
+import { storageService } from '../services/storage.service';
+import { voteService } from '../services/vote.service';
 import type { Project } from '../types';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -17,33 +20,26 @@ export default function ProjectDetailPage() {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const mainRef = useRef<HTMLDivElement>(null);
-  const sidebarRef = useRef<HTMLDivElement>(null);
-
-  // Animations are handled by the RouteAnimator in App.tsx
-  // We just use refs for potential future use
 
   const { data: project, isLoading } = useQuery<Project>({
     queryKey: ['project', id],
-    queryFn: () => api.get(`/projects/${id}`).then((r) => r.data),
+    queryFn: () => projectService.getById(id!),
   });
 
   const { data: hasVoted = false } = useQuery<boolean>({
     queryKey: ['vote', id, user?.id],
-    queryFn: () => api.get(`/projects/${id}/votes/me`).then((r) => r.data.voted),
+    queryFn: () => voteService.hasVoted(id!),
     enabled: !!user,
   });
 
   const { data: hasDisliked = false } = useQuery<boolean>({
     queryKey: ['dislike', id, user?.id],
-    queryFn: () => api.get(`/projects/${id}/dislikes/me`).then((r) => r.data.disliked),
+    queryFn: () => voteService.hasDisliked(id!),
     enabled: !!user,
   });
 
   const voteMutation = useMutation({
-    mutationFn: () => hasVoted
-      ? api.delete(`/projects/${id}/votes`)
-      : api.post(`/projects/${id}/votes`),
+    mutationFn: () => (hasVoted ? voteService.unvote(id!) : voteService.vote(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
@@ -52,9 +48,7 @@ export default function ProjectDetailPage() {
   });
 
   const dislikeMutation = useMutation({
-    mutationFn: () => hasDisliked
-      ? api.delete(`/projects/${id}/dislikes`)
-      : api.post(`/projects/${id}/dislikes`),
+    mutationFn: () => (hasDisliked ? voteService.undislike(id!) : voteService.dislike(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
@@ -63,7 +57,7 @@ export default function ProjectDetailPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: () => api.delete(`/projects/${id}`),
+    mutationFn: () => projectService.delete(id!),
     onSuccess: () => navigate('/'),
   });
 
@@ -84,8 +78,10 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center page-enter">
-        <p className="text-[var(--text-muted)]">Projet introuvable.</p>
-        <button onClick={() => navigate('/')} className="mt-4 text-sm font-semibold gradient-text hover:opacity-80 transition-opacity">Retour à l'accueil</button>
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/10 flex items-center justify-center mb-4 text-3xl">🔍</div>
+        <p className="font-semibold text-[var(--text-primary)] mb-1">Projet introuvable</p>
+        <p className="text-sm text-[var(--text-muted)] mb-6">Ce projet n'existe pas ou a été supprimé.</p>
+        <Button variant="ghost" onClick={() => navigate('/')}>Retour à l'accueil</Button>
       </div>
     );
   }
@@ -98,13 +94,7 @@ export default function ProjectDetailPage() {
   return (
     <div className="min-h-[calc(100vh-56px)] page-enter">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Breadcrumb */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] mb-5 sm:mb-6 transition-colors group"
-        >
-          <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" /> Retour aux projets
-        </button>
+        <BackButton onClick={() => navigate(-1)} label="Retour aux projets" />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 items-start">
           {/* Main content */}
@@ -152,44 +142,14 @@ export default function ProjectDetailPage() {
                       <FileText size={14} /> Document Joint
                     </h2>
                     <div className="flex items-center gap-4">
-                      <a
-                        href="#"
-                        onClick={async (e) => {
-                          e.preventDefault();
-                          try {
-                            const urlParts = project.file_url.split('/');
-                            const rawFileName = urlParts[urlParts.length - 1].split('?')[0];
-
-                            let displayFileName = `${project.title || 'document'}.pdf`;
-                            if (rawFileName.includes('-')) {
-                              const parts = rawFileName.split('-');
-                              parts.shift();
-                              displayFileName = parts.join('-');
-                            }
-
-                            const { supabase } = await import('../lib/supabase');
-                            const { data: blob, error } = await supabase.storage.from('project_files').download(rawFileName);
-
-                            if (error) throw error;
-                            if (!blob) throw new Error("No blob returned");
-
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = displayFileName;
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            window.URL.revokeObjectURL(url);
-                          } catch (err) {
-                            console.error('Download failed', err);
-                            window.open(`${project.file_url}?download=${encodeURIComponent(project.title || 'document')}.pdf`, '_blank');
-                          }
-                        }}
+                      <button
+                        onClick={() => storageService.downloadProjectFile(project.file_url!, project.title).catch(() => {
+                          window.open(`${project.file_url}?download=${encodeURIComponent(project.title)}.pdf`, '_blank');
+                        })}
                         className="text-xs font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-80 transition-opacity flex items-center gap-1"
                       >
                         <Download size={14} className="text-purple-600" /> Télécharger
-                      </a>
+                      </button>
                       <a
                         href={project.file_url}
                         target="_blank"
@@ -212,9 +172,8 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* Sidebar — on mobile, shown below main content */}
+          {/* Sidebar */}
           <div className="space-y-4">
-            {/* Vote */}
             <div className="glass-card-static p-5">
               <div className="flex gap-2">
                 <button
@@ -248,7 +207,6 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            {/* Meta */}
             <div className="glass-card-static p-4 sm:p-5 space-y-4 text-sm">
               <div>
                 <p className="text-xs text-[var(--text-muted)] mb-1 font-bold uppercase tracking-widest">Ajouté le</p>
@@ -275,22 +233,25 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            {/* Actions admin/owner */}
             {canEdit && (
               <div className="glass-card-static p-4 sm:p-5 space-y-2">
-                <button
+                <Button
+                  variant="ghost"
+                  size="md"
                   onClick={() => navigate(`/projects/${id}/edit`)}
-                  className="w-full flex items-center justify-center gap-2 text-sm btn-ghost py-3"
+                  fullWidth
                 >
                   <Pencil size={13} /> Modifier
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="danger"
+                  size="md"
                   onClick={() => { if (confirm('Supprimer ce projet ?')) deleteMutation.mutate(); }}
                   disabled={deleteMutation.isPending}
-                  className="w-full flex items-center justify-center gap-2 text-sm text-red-500 border border-red-500/20 py-2 rounded-xl hover:bg-red-50/80 transition-all disabled:opacity-50"
+                  fullWidth
                 >
                   <Trash2 size={13} /> Supprimer
-                </button>
+                </Button>
               </div>
             )}
           </div>

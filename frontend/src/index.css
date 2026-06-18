@@ -26,6 +26,10 @@
   --shadow-card: 0 1px 3px rgba(124, 58, 237, 0.06), 0 1px 2px rgba(124, 58, 237, 0.04);
   --shadow-elevated: 0 10px 40px rgba(124, 58, 237, 0.1), 0 2px 8px rgba(124, 58, 237, 0.06);
   --shadow-glow: 0 0 30px rgba(168, 85, 247, 0.15);
+
+  --bg-elevated: rgba(240, 238, 255, 0.6);
+  --bg-surface: rgba(255, 255, 255, 0.4);
+  --bg-surface-hover: rgba(124, 58, 237, 0.04);
 }
 
 [data-theme='dark'] {
@@ -44,6 +48,10 @@
   --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-elevated: 0 10px 40px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-glow: 0 0 30px rgba(168, 85, 247, 0.08);
+
+  --bg-elevated: rgba(18, 16, 42, 0.5);
+  --bg-surface: rgba(15, 12, 40, 0.3);
+  --bg-surface-hover: rgba(168, 85, 247, 0.06);
 }
 
 /* ── Base ─────────────────────────────────────────── */
