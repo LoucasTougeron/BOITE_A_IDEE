@@ -94,7 +94,7 @@ export default function RewardsPage() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <PageHeader
           icon={<Trophy size={24} className="text-yellow-500" />}
-          title="Récompenses et trophées"
+          title="Scores & Trophées"
           description="Suivez votre progression, débloquez des trophées et participez aux tirages."
           action={
             <Button onClick={() => participateMutation.mutate()} disabled={participateMutation.isPending}>
@@ -104,17 +104,17 @@ export default function RewardsPage() {
         />
 
         {/* Niveau + Résumé */}
-        <div className="grid gap-6 lg:grid-cols-3 mb-8">
-          <Card title="Niveau et Progression" className="lg:col-span-2">
+        <div className="grid gap-6 mb-8">
+          <Card title="Niveau et Progression">
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Votre niveau</p>
-                  <p className="text-3xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{data.level}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)] leading-tight" style={{ fontFamily: 'var(--font-display)' }}>{data.level}</p>
                 </div>
-                <div className="text-right">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-pink-500/10 to-purple-500/10 border border-pink-500/20">
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-1">Points</p>
-                  <p className="text-3xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{data.points}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-display)' }}>{data.points}</p>
                 </div>
               </div>
               <ProgressBar
@@ -126,7 +126,7 @@ export default function RewardsPage() {
           </Card>
 
           <Card title="Résumé">
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <StatCard icon={<Zap size={16} className="text-yellow-500" />} label="Idées postées" value={data.stats.ideaCount} />
               <StatCard icon={<Heart size={16} className="text-red-500" />} label="Likes reçus" value={data.stats.totalLikes} />
               <StatCard icon={<TrendingUp size={16} className="text-emerald-500" />} label="Votes donnés" value={data.stats.votesGivenCount} />
@@ -154,12 +154,12 @@ export default function RewardsPage() {
           title={`Trophées (${filteredTrophies.length})`}
           icon={<Trophy size={16} className="text-yellow-500" />}
           action={
-            <div className="flex gap-1.5">
+            <div className="flex gap-1 overflow-x-auto">
               {(['all', 'earned', 'locked'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     filter === f ? FILTER_STYLES[f] : 'text-[var(--text-muted)] hover:bg-[var(--border-light)]'
                   }`}
                 >

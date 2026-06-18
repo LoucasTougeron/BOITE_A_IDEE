@@ -22,7 +22,8 @@ export default function Card({
   return (
     <div className={`glass-card-static rounded-xl ${overflow ? '' : 'overflow-hidden'} ${className}`}>
       {hasHeader && (
-      <div className={`flex items-center justify-between gap-3 border-b border-[var(--border-light)] py-4 px-6`}>          {title && (
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--border-light)] py-4 px-6">
+          {title && (
             <div className="flex items-center gap-2 min-w-0">
               {icon && <span className="shrink-0 text-[var(--accent-2)]">{icon}</span>}
               <h2 className="text-base font-semibold uppercase">{title}</h2>

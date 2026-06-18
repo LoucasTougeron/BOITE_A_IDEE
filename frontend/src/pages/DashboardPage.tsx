@@ -91,7 +91,7 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto px-8 py-8">
         <PageHeader
           icon={<LayoutDashboard size={24} className="text-[var(--accent-2)]" />}
-          title="Dashboard Pédagogie"
+          title="Dashboard"
           description="Gestion des votes, classements et classes étudiantes."
         />
 

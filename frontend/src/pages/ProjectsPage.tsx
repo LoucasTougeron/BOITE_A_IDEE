@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Filter, FolderOpen, LayoutGrid, List, Plus, Search, Shuffle, X } from 'lucide-react';
+import InputField from '../components/ui/InputField';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProjectCard from '../components/ProjectCard';
@@ -71,20 +72,14 @@ export default function ProjectsPage() {
           </button>
         </div>
 
-        <div className="relative mb-6">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
-          <input
-            type="text"
+        <div className="mb-6">
+          <InputField
             placeholder="Rechercher..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-modern pl-9"
+            onChange={setSearch}
+            onClear={() => setSearch('')}
+            icon={<Search size={14} />}
           />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-              <X size={13} />
-            </button>
-          )}
         </div>
 
         <SectionTitle className="mb-2 px-1">Thématique</SectionTitle>
@@ -137,7 +132,7 @@ export default function ProjectsPage() {
           <PageHeader
             icon={<FolderOpen size={24} className="text-[var(--accent-2)]" />}
             title="Projets"
-            description="Découvrez tous les projets proposés et likez ceux qui vous plaisent !"
+            description="Découvrez des projets proposés et likez ceux qui vous plaisent !"
             action={
               <div className="flex items-center gap-2">
                 <button
