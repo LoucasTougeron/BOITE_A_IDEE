@@ -1,4 +1,5 @@
 import api from '../lib/api';
+import { supabase } from '../lib/supabase';
 import type { Profile } from '../types';
 
 export interface UpdateProfilePayload {
@@ -17,8 +18,9 @@ export const userService = {
     return api.put<Profile>('/users/me', payload).then((r) => r.data);
   },
 
-  changePassword(password: string): Promise<void> {
-    return api.put('/auth/password', { password }).then(() => undefined);
+  async changePassword(password: string): Promise<void> {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
   },
 
   getAll(): Promise<Profile[]> {

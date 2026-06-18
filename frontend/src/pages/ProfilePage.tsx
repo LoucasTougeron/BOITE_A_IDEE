@@ -67,8 +67,8 @@ export default function ProfilePage() {
     setPasswordLoading(true);
     try {
       await userService.changePassword(passwordForm.newPassword);
-      setMessage({ type: 'success', text: 'Mot de passe modifié avec succès.' });
       setPasswordForm({ newPassword: '', confirmPassword: '' });
+      setMessage({ type: 'success', text: 'Mot de passe modifié avec succès.' });
     } catch (err: unknown) {
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
