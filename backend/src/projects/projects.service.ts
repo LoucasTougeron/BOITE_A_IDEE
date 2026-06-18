@@ -99,8 +99,8 @@ export class ProjectsService {
     if (!project) throw new NotFoundException();
     if (project.creator_id !== user.id && user.role !== 'admin') throw new ForbiddenException();
 
-    if (project) {
-      const creatorId = project.creator_id;
+    const creatorId = project.creator_id;
+    {
 
       // Get all votes for this project
       const { data: votes } = await this.supabase.db

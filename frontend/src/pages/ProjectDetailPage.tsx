@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user, isAdmin } = useAuth();
+  const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -27,23 +27,23 @@ export default function ProjectDetailPage() {
   });
 
   const { data: hasVoted = false } = useQuery<boolean>({
-    queryKey: ['vote', id, user?.id],
+    queryKey: ['vote', id, profile?.id],
     queryFn: () => voteService.hasVoted(id!),
-    enabled: !!user,
+    enabled: !!profile,
   });
 
   const { data: hasDisliked = false } = useQuery<boolean>({
-    queryKey: ['dislike', id, user?.id],
+    queryKey: ['dislike', id, profile?.id],
     queryFn: () => voteService.hasDisliked(id!),
-    enabled: !!user,
+    enabled: !!profile,
   });
 
   const voteMutation = useMutation({
     mutationFn: () => (hasVoted ? voteService.unvote(id!) : voteService.vote(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
-      queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['dislike', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['vote', id, profile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['dislike', id, profile?.id] });
     },
   });
 
@@ -51,8 +51,8 @@ export default function ProjectDetailPage() {
     mutationFn: () => (hasDisliked ? voteService.undislike(id!) : voteService.dislike(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
-      queryClient.invalidateQueries({ queryKey: ['vote', id, user?.id] });
-      queryClient.invalidateQueries({ queryKey: ['dislike', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['vote', id, profile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['dislike', id, profile?.id] });
     },
   });
 
@@ -88,7 +88,7 @@ export default function ProjectDetailPage() {
 
   const voteCount = project.votes?.[0]?.count ?? 0;
   const dislikeCount = project.dislikes?.[0]?.count ?? 0;
-  const canEdit = user?.id === project.creator_id || isAdmin;
+  const canEdit = profile?.id === project.creator_id || isAdmin;
   const date = new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
@@ -177,7 +177,7 @@ export default function ProjectDetailPage() {
             <div className="glass-card-static p-5">
               <div className="flex gap-2">
                 <button
-                  onClick={() => user ? voteMutation.mutate() : navigate('/login')}
+                  onClick={() => profile ? voteMutation.mutate() : navigate('/login')}
                   disabled={voteMutation.isPending || dislikeMutation.isPending}
                   className={`flex-1 flex items-center justify-center gap-1.5 font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50 text-sm ${
                     hasVoted
@@ -190,7 +190,7 @@ export default function ProjectDetailPage() {
                 </button>
 
                 <button
-                  onClick={() => user ? dislikeMutation.mutate() : navigate('/login')}
+                  onClick={() => profile ? dislikeMutation.mutate() : navigate('/login')}
                   disabled={voteMutation.isPending || dislikeMutation.isPending}
                   className={`flex-1 flex items-center justify-center gap-1.5 font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50 text-sm ${
                     hasDisliked
@@ -202,7 +202,7 @@ export default function ProjectDetailPage() {
                   {dislikeCount} Dislike{dislikeCount > 1 ? 's' : ''}
                 </button>
               </div>
-              {!user && (
+              {!profile && (
                 <p className="text-center text-xs text-[var(--text-muted)] mt-2">Connectez-vous pour voter</p>
               )}
             </div>

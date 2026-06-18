@@ -10,6 +10,8 @@ export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Get()
+  @Roles('admin')
+  @UseGuards(RolesGuard)
   findAll() {
     return this.teamsService.findAll();
   }
