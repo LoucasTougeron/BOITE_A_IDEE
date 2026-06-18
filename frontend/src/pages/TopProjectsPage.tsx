@@ -42,16 +42,36 @@ export default function TopProjectsPage() {
   const [initialized, setInitialized] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
+  // Initialisation : ne garder que les top projets encore likés
   useEffect(() => {
-    if (existingTop.length > 0 && !initialized) {
-      const initOrder = existingTop.map((t) => t.project_id);
+    if (!loadingLiked && existingTop.length > 0 && !initialized) {
+      const validTopProjects = existingTop.filter((t) =>
+        likedProjects.some((p) => p.id === t.project_id),
+      );
+
+      const initOrder = validTopProjects.map((t) => t.project_id);
       const initRankings: Record<string, number> = {};
-      initOrder.forEach((id, i) => { initRankings[id] = i + 1; });
+      initOrder.forEach((id, i) => {
+        initRankings[id] = i + 1;
+      });
       setRankings(initRankings);
       setOrderedSelected(initOrder);
       setInitialized(true);
     }
-  }, [existingTop, initialized]);
+  }, [existingTop, initialized, likedProjects, loadingLiked]);
+
+  // Nettoyage en continu : si un projet sélectionné n'est plus liké, le retirer automatiquement
+  useEffect(() => {
+    if (!initialized) return;
+    const hasInvalid = orderedSelected.some((id) => !likedProjects.some((p) => p.id === id));
+    if (hasInvalid) {
+      const validOrder = orderedSelected.filter((id) => likedProjects.some((p) => p.id === id));
+      const reRanked: Record<string, number> = {};
+      validOrder.forEach((id, i) => { reRanked[id] = i + 1; });
+      setOrderedSelected(validOrder);
+      setRankings(reRanked);
+    }
+  }, [likedProjects]);
 
   const availableProjects = likedProjects.filter((p) => !rankings[p.id]);
 
