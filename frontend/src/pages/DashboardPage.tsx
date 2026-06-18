@@ -92,7 +92,7 @@ export default function DashboardPage() {
         <PageHeader
           icon={<LayoutDashboard size={24} className="text-[var(--accent-2)]" />}
           title="Dashboard"
-          description="Gestion des votes, classements et classes étudiantes."
+          description="Gestion des votes, classements et équipes étudiantes."
         />
 
         <div className="flex gap-4 mb-8 border-b border-[var(--border-light)] pb-2">
@@ -104,7 +104,7 @@ export default function DashboardPage() {
                   onClick={() => setActiveTab(tab)}
                   className={`font-semibold transition-colors pb-2 -mb-[9px] border-b-2 ${activeTab === tab ? 'text-[var(--text-primary)] border-purple-500' : 'text-[var(--text-muted)] border-transparent hover:text-[var(--text-secondary)]'}`}
                 >
-                  {tab === 'votes' ? 'Votes des étudiants' : tab === 'rankings' ? 'Classements' : 'Gestion des classes'}
+                  {tab === 'votes' ? 'Votes des étudiants' : tab === 'rankings' ? 'Classements' : 'Gestion des équipes'}
                 </button>
               ))}
             </>
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                   <thead className="bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
                     <tr>
                       <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Étudiant</th>
-                      <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Classe</th>
+                      <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Équipe</th>
                       <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Projet voté</th>
                       <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Thème du projet</th>
                       <th className="px-6 py-4 font-semibold uppercase tracking-wider text-xs">Date</th>
@@ -171,13 +171,13 @@ export default function DashboardPage() {
         {isAdmin && activeTab === 'rankings' && (
           <div className="space-y-8">
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-[var(--text-secondary)]">Filtrer par classe :</label>
+              <label className="text-sm font-medium text-[var(--text-secondary)]">Filtrer par équipe :</label>
               <select
                 value={selectedTeamId}
                 onChange={(e) => setSelectedTeamId(e.target.value)}
                 className="input-modern text-sm py-1.5 px-3"
               >
-                <option value="">Toutes les classes</option>
+                <option value="">Toutes les équipes</option>
                 {teams.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
@@ -195,7 +195,7 @@ export default function DashboardPage() {
                 {!statsToShow ? (
                   <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>
                 ) : statsToShow.byLikes.length === 0 ? (
-                  <div className="p-8 text-center text-[var(--text-muted)]">Aucune donnée pour cette classe.</div>
+                  <div className="p-8 text-center text-[var(--text-muted)]">Aucune donnée pour cette équipe.</div>
                 ) : (
                   <table className="w-full text-left text-sm">
                     <thead className="bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
@@ -235,7 +235,7 @@ export default function DashboardPage() {
                 {!statsToShow ? (
                   <div className="p-8 text-center text-[var(--text-muted)]">Chargement...</div>
                 ) : statsToShow.byTopScore.length === 0 ? (
-                  <div className="p-8 text-center text-[var(--text-muted)]">Aucun Top 3 pour cette classe.</div>
+                  <div className="p-8 text-center text-[var(--text-muted)]">Aucun Top 3 pour cette équipe.</div>
                 ) : (
                   <table className="w-full text-left text-sm">
                     <thead className="bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
@@ -281,10 +281,10 @@ export default function DashboardPage() {
         {isAdmin && activeTab === 'teams' && (
           <div className="grid grid-cols-3 gap-8">
             <div className="col-span-1 space-y-6">
-              <Card title="Créer une classe" icon={<Plus size={15} />}>
+              <Card title="Créer une équipe" icon={<Plus size={15} />}>
                 <div className="space-y-4">
                   <InputField
-                    label="Nom de la classe"
+                    label="Nom de l'équipe"
                     placeholder="ex : M2 Dev"
                     value={newTeamName}
                     onChange={setNewTeamName}
@@ -294,12 +294,12 @@ export default function DashboardPage() {
                     disabled={createTeamMutation.isPending || !newTeamName.trim()}
                     fullWidth
                   >
-                    {createTeamMutation.isPending ? 'Création...' : 'Créer la classe'}
+                    {createTeamMutation.isPending ? 'Création...' : "Créer l'équipe"}
                   </Button>
                 </div>
               </Card>
 
-              <Card title={`Classes existantes (${teams.length})`} icon={<Users size={15} />}>
+              <Card title={`Équipes existantes (${teams.length})`} icon={<Users size={15} />}>
                 {loadingTeams ? (
                   <LoadingState />
                 ) : (
@@ -328,7 +328,7 @@ export default function DashboardPage() {
                       <tr>
                         <th className="px-6 py-3 font-semibold uppercase tracking-wider text-xs">Étudiant</th>
                         <th className="px-6 py-3 font-semibold uppercase tracking-wider text-xs">Rôle</th>
-                        <th className="px-6 py-3 font-semibold uppercase tracking-wider text-xs w-48">Classe</th>
+                        <th className="px-6 py-3 font-semibold uppercase tracking-wider text-xs w-48">Équipe</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[var(--border-light)]">

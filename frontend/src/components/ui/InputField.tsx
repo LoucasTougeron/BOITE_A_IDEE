@@ -11,6 +11,7 @@ interface InputFieldProps {
   icon?: ReactNode;
   required?: boolean;
   disabled?: boolean;
+  error?: boolean;
 }
 
 export default function InputField({
@@ -23,6 +24,7 @@ export default function InputField({
   icon,
   required = false,
   disabled = false,
+  error = false,
 }: InputFieldProps) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
@@ -33,9 +35,9 @@ export default function InputField({
   return (
     <div className="flex flex-col gap-1.5">
       {label && (
-        <label className="block text-xs font-semibold text-[var(--text-secondary)] tracking-wide uppercase">
+        <label className="block text-xs font-semibold tracking-wide uppercase" style={{ color: error ? 'var(--error, #ef4444)' : 'var(--text-secondary)' }}>
           {label}
-          {required && <span style={{ color: 'var(--accent-2)' }}> *</span>}
+          {required && <span style={{ color: error ? 'var(--error, #ef4444)' : 'var(--accent-2)' }}> *</span>}
           {hint && (
             <span className="ml-1 font-normal text-[var(--text-muted)] normal-case tracking-normal">{hint}</span>
           )}
@@ -52,12 +54,13 @@ export default function InputField({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          required={required}
           disabled={disabled}
           className="input-modern"
           style={{
             paddingLeft: icon ? '2.25rem' : undefined,
             paddingRight: hasRightAction ? '2.25rem' : undefined,
+            borderColor: error ? 'var(--error, #ef4444)' : undefined,
+            boxShadow: error ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : undefined,
           }}
         />
         {/* Clear button — visible quand il y a une valeur (hors password) */}

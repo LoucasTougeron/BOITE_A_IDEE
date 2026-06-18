@@ -14,6 +14,7 @@ interface SelectFieldProps {
   options: Option[];
   placeholder?: string;
   required?: boolean;
+  error?: boolean;
 }
 
 export default function SelectField({
@@ -23,6 +24,7 @@ export default function SelectField({
   options,
   placeholder = 'Sélectionner',
   required = false,
+  error = false,
 }: SelectFieldProps) {
   const [open, setOpen] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
@@ -60,10 +62,10 @@ export default function SelectField({
     <div className="flex flex-col gap-1.5" ref={containerRef}>
       <label
         className="block text-xs font-semibold tracking-wide uppercase"
-        style={{ color: 'var(--text-secondary)' }}
+        style={{ color: error ? 'var(--error, #ef4444)' : 'var(--text-secondary)' }}
       >
         {label}
-        {required && <span style={{ color: 'var(--accent-2)' }}> *</span>}
+        {required && <span style={{ color: error ? 'var(--error, #ef4444)' : 'var(--accent-2)' }}> *</span>}
       </label>
 
       {/* Trigger */}
@@ -74,8 +76,8 @@ export default function SelectField({
         className="input-modern flex items-center justify-between gap-2 text-left"
         style={{
           color: selected ? 'var(--text-primary)' : 'var(--text-muted)',
-          borderColor: open ? 'var(--accent-2)' : undefined,
-          boxShadow: open ? '0 0 0 3px rgba(168, 85, 247, 0.15)' : undefined,
+          borderColor: open ? 'var(--accent-2)' : error ? 'var(--error, #ef4444)' : undefined,
+          boxShadow: open ? '0 0 0 3px rgba(168, 85, 247, 0.15)' : error ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : undefined,
         }}
       >
         <span className="truncate">{selected ? selected.label : placeholder}</span>

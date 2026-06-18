@@ -29,6 +29,7 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,11 +46,20 @@ export default function LoginPage() {
     setLastName('');
     setPromo('');
     setSpecialty('');
+    setSubmitted(false);
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
+    setSubmitted(true);
+
+    if (!email || !password) return;
+    if (isRegister) {
+      if (!firstName || !lastName || !promo) return;
+      if (specialtyRequired && !specialty) return;
+    }
+
     setLoading(true);
 
     let error = null;
@@ -133,8 +143,8 @@ export default function LoginPage() {
             {isRegister && (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <InputField label="Prénom" placeholder="Audrey" value={firstName} onChange={setFirstName} required />
-                  <InputField label="Nom" placeholder="Dupont" value={lastName} onChange={setLastName} required />
+                  <InputField label="Prénom" placeholder="Audrey" value={firstName} onChange={setFirstName} required error={submitted && !firstName} />
+                  <InputField label="Nom" placeholder="Dupont" value={lastName} onChange={setLastName} required error={submitted && !lastName} />
                 </div>
 
                 <SelectField
@@ -144,6 +154,7 @@ export default function LoginPage() {
                   options={PROMOS.map((p) => ({ value: p, label: p }))}
                   placeholder="Sélectionner une promo"
                   required
+                  error={submitted && !promo}
                 />
 
                 {specialtyRequired && (
@@ -154,13 +165,14 @@ export default function LoginPage() {
                     options={specialtyOptions.map((s) => ({ value: s, label: s }))}
                     placeholder="Sélectionner une spécialité"
                     required
+                    error={submitted && !specialty}
                   />
                 )}
               </>
             )}
 
-            <InputField label="Adresse email" type="email" placeholder="prenom.nom@supdevinci.fr" value={email} onChange={setEmail} required />
-            <InputField label="Mot de passe" type="password" placeholder="••••••••" value={password} onChange={setPassword} required />
+            <InputField label="Adresse email" type="email" placeholder="prenom.nom@supdevinci.fr" value={email} onChange={setEmail} required error={submitted && !email} />
+            <InputField label="Mot de passe" type="password" placeholder="••••••••" value={password} onChange={setPassword} required error={submitted && !password} />
 
             {error && <AlertMessage type="error">{error}</AlertMessage>}
 
