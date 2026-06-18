@@ -18,7 +18,6 @@ export interface ProposedTeam {
 
 export interface AutoGenerateResult {
   teams: ProposedTeam[];
-  unassigned: Omit<ProposedTeamMember, 'affinityScore'>[];
   stats: {
     totalStudents: number;
     studentsWithPreferences: number;
@@ -48,7 +47,7 @@ export const teamService = {
     }).then((r) => r.data);
   },
 
-  autoAssign(teams: ({ name: string; existingTeamId?: never } | { existingTeamId: string; name?: never } & { memberIds: string[] })[]): Promise<void> {
+  autoAssign(teams: { name?: string; existingTeamId?: string; memberIds: string[] }[]): Promise<void> {
     return api.post('/teams/auto-assign', { teams }).then(() => undefined);
   },
 };

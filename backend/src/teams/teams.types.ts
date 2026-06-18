@@ -15,7 +15,6 @@ export interface ProposedTeam {
 
 export interface AutoGenerateResult {
   teams: ProposedTeam[];
-  unassigned: Omit<TeamMember, 'affinityScore'>[];
   stats: {
     totalStudents: number;
     studentsWithPreferences: number;

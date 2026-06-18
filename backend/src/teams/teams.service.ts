@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import type { AutoGenerateResult, ProposedTeam, StudentRow } from './teams.types';
 
-export type { AutoGenerateResult, ProposedTeam };
-
-// Points attribués selon le rang choisi par l'étudiant dans son top 3
+/** Score d'une préférence selon sa source : top 1/2/3 ou simple like. */
 const RANK_SCORE: Record<number, number> = { 1: 3, 2: 2, 3: 1 };
-// Points attribués pour un simple like (sans classement explicite)
 const LIKE_SCORE = 0.5;
+
+/** Préférences par étudiant : id étudiant -> (id projet -> score). */
+type Preferences = Map<string, Map<string, number>>;
 
 @Injectable()
 export class TeamsService {
@@ -34,234 +34,159 @@ export class TeamsService {
     return data;
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Génération automatique des équipes
-  //
-  // Deux modes selon le filtre appliqué :
-  //   • Mode "affinité"  (promo sélectionnée) : les étudiants sont triés par
-  //     leur projet préféré puis découpés en tranches — ceux qui partagent le
-  //     même projet favori se retrouvent dans la même équipe.
-  //   • Mode "équilibré" (toutes promos)      : les étudiants sont répartis en
-  //     round-robin selon leur groupe (promo + spécialité) pour assurer la
-  //     diversité des profils dans chaque équipe.
-  // ─────────────────────────────────────────────────────────────────────────
-  async autoGenerate(
-    teamSize: number,
-    filterPromo?: string,
-    filterSpecialty?: string,
-  ): Promise<AutoGenerateResult> {
+  async autoGenerate(teamSize: number, filterPromo?: string, filterSpecialty?: string): Promise<AutoGenerateResult> {
+    const students = await this.fetchStudents(filterPromo, filterSpecialty);
+    // Filtrer sur une promo => on regroupe par affinité, sinon on équilibre les profils.
+    const mode = filterPromo ? 'affinity' : 'balanced';
 
-    // ── Étape 1 : récupérer les étudiants correspondant aux filtres ──────────
-    let studentsQuery = this.supabase.db
-      .from('users')
-      .select('id, first_name, last_name, email, promo, specialty')
-      .eq('role', 'user');
-    if (filterPromo)     studentsQuery = studentsQuery.eq('promo', filterPromo);
-    if (filterSpecialty) studentsQuery = studentsQuery.eq('specialty', filterSpecialty);
-
-    const { data: studentsData, error: studentsError } = await studentsQuery;
-    if (studentsError) throw studentsError;
-
-    const students = studentsData as StudentRow[];
-    const studentIds = students.map((s) => s.id);
-
-    // Aucun étudiant trouvé pour ces filtres → on retourne un résultat vide
-    if (studentIds.length === 0) {
-      return {
-        teams: [],
-        unassigned: [],
-        stats: { totalStudents: 0, studentsWithPreferences: 0, studentsWithoutPreferences: 0, mode: filterPromo ? 'affinity' : 'balanced' },
-      };
+    if (students.length === 0) {
+      return { teams: [], stats: { totalStudents: 0, studentsWithPreferences: 0, studentsWithoutPreferences: 0, mode } };
     }
 
-    // ── Étape 2 : récupérer les préférences en parallèle ────────────────────
-    // On filtre directement en base sur les IDs des étudiants concernés
-    // pour éviter de rapatrier des données inutiles.
-    const [topProjectsRes, likesRes] = await Promise.all([
-      this.supabase.db.from('user_top_projects').select('user_id, project_id, rank').in('user_id', studentIds),
-      this.supabase.db.from('votes').select('user_id, project_id').in('user_id', studentIds),
-    ]);
+    const prefs = await this.loadPreferences(students.map((s) => s.id));
 
-
-    // ── Étape 3 : construire le vecteur de préférences de chaque étudiant ───
-    // Le score reflète l'intensité de la préférence :
-    //   top 1 = 3 pts, top 2 = 2 pts, top 3 = 1 pt, like seul = 0.5 pt
-    const preferencesByStudent = new Map<string, Map<string, number>>(
-      studentIds.map((id) => [id, new Map()]),
-    );
-
-    // Remplissage depuis le top 3 explicite
-    for (const topProject of (topProjectsRes.data ?? [])) {
-      preferencesByStudent
-        .get(topProject.user_id)!
-        .set(topProject.project_id, RANK_SCORE[topProject.rank] ?? 1);
-    }
-
-    // Remplissage depuis les likes (uniquement si le projet n'est pas déjà dans le top 3)
-    for (const like of (likesRes.data ?? [])) {
-      const prefs = preferencesByStudent.get(like.user_id)!;
-      if (!prefs.has(like.project_id)) prefs.set(like.project_id, LIKE_SCORE);
-    }
-
-    // ── Étape 4 : précalculer le projet préféré de chaque étudiant ──────────
-    // Ce projet servira de clé de tri en mode affinité.
-    const favoriteProjectByStudent = new Map<string, string>(
-      studentIds.map((id) => {
-        const prefs = preferencesByStudent.get(id)!;
-        if (prefs.size === 0) return [id, `zzz__${id}`];
-        const [bestProjectId] = [...prefs.entries()].reduce((best, current) =>
-          current[1] > best[1] ? current : best,
-        );
-        return [id, bestProjectId];
-      }),
-    );
-
-    // ── Étape 5 : découper les étudiants en groupes (chunks) ────────────────
-    const teamChunks: StudentRow[][] = filterPromo
-      ? this.chunkByAffinity(students, teamSize, favoriteProjectByStudent)
+    const chunks = mode === 'affinity'
+      ? this.chunkByAffinity(students, teamSize, prefs)
       : this.chunkByBalance(students, teamSize);
 
-    // ── Étape 6 : construire les équipes finales avec scores
-    const proposedTeams: ProposedTeam[] = teamChunks.map((chunk, index) => ({
-      name: `Équipe ${index + 1}`,
-
-      // Pour chaque membre, on calcule son score d'affinité moyen avec les autres
-      members: chunk.map((student) => {
-        const studentPrefs = preferencesByStudent.get(student.id)!;
-        const teammates = chunk.filter((other) => other.id !== student.id);
-
-        const averageAffinityScore = teammates.length === 0 ? 0
-          : teammates.reduce((total, teammate) => {
-              const teammatePrefs = preferencesByStudent.get(teammate.id)!;
-              let pairScore = 0;
-              for (const [projectId, score] of studentPrefs) {
-                const teammateScore = teammatePrefs.get(projectId);
-                if (teammateScore !== undefined) pairScore += score + teammateScore;
-              }
-              return total + pairScore;
-            }, 0) / teammates.length;
-
-        return {
-          id: student.id,
-          first_name: student.first_name,
-          last_name: student.last_name,
-          email: student.email,
-          promo: student.promo,
-          specialty: student.specialty,
-          affinityScore: Math.round(averageAffinityScore * 10) / 10,
-        };
-      }),
-
+    const teams: ProposedTeam[] = chunks.map((members, i) => ({
+      name: `Équipe ${i + 1}`,
+      members: members.map((s) => ({ ...s, affinityScore: this.affinityScore(s, members, prefs) })),
     }));
 
-    const studentsWithPreferencesCount = studentIds.filter(
-      (id) => preferencesByStudent.get(id)!.size > 0,
-    ).length;
+    const withPrefs = students.filter((s) => prefs.get(s.id)!.size > 0).length;
 
     return {
-      teams: proposedTeams,
-      unassigned: [],
-      stats: {
-        totalStudents: students.length,
-        studentsWithPreferences: studentsWithPreferencesCount,
-        studentsWithoutPreferences: students.length - studentsWithPreferencesCount,
-        mode: filterPromo ? 'affinity' : 'balanced',
-      },
+      teams,
+      stats: { totalStudents: students.length, studentsWithPreferences: withPrefs, studentsWithoutPreferences: students.length - withPrefs, mode },
     };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Application des équipes proposées
-  // Crée les nouvelles équipes en parallèle, puis affecte les membres en batch.
-  // ─────────────────────────────────────────────────────────────────────────
-  async autoAssign(
-    proposedTeams: { name?: string; existingTeamId?: string; memberIds: string[] }[],
-  ): Promise<void> {
-    // Résolution des IDs : réutilisation d'une équipe existante ou création
-    const teamAssignments = await Promise.all(
-      proposedTeams.map(async (team) => ({
-        teamId: team.existingTeamId ?? await this.createTeamAndReturnId(team.name ?? 'Équipe'),
-        memberIds: team.memberIds,
+  async autoAssign(teams: { name?: string; existingTeamId?: string; memberIds: string[] }[]): Promise<void> {
+    const assignments = await Promise.all(
+      teams.map(async (t) => ({
+        teamId: t.existingTeamId ?? await this.createTeamAndReturnId(t.name ?? 'Équipe'),
+        memberIds: t.memberIds,
       })),
     );
 
-    // Mise à jour des utilisateurs en une requête par équipe (IN clause)
     await Promise.all(
-      teamAssignments.map(({ teamId, memberIds }) =>
-        this.supabase.db
-          .from('users')
-          .update({ team_id: teamId })
-          .in('id', memberIds)
+      assignments.map(({ teamId, memberIds }) =>
+        this.supabase.db.from('users').update({ team_id: teamId }).in('id', memberIds)
           .then(({ error }) => { if (error) throw error; }),
       ),
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Méthodes privées
-  // ─────────────────────────────────────────────────────────────────────────
+  /** Étudiants éligibles, filtrés optionnellement par promo / spécialité. */
+  private async fetchStudents(filterPromo?: string, filterSpecialty?: string): Promise<StudentRow[]> {
+    let query = this.supabase.db
+      .from('users')
+      .select('id, first_name, last_name, email, promo, specialty')
+      .eq('role', 'user');
+    if (filterPromo)     query = query.eq('promo', filterPromo);
+    if (filterSpecialty) query = query.eq('specialty', filterSpecialty);
 
-  // Mode affinité : tri par projet favori → les étudiants avec le même projet
-  // préféré se retrouvent adjacents, puis on découpe en tranches de teamSize.
-  private chunkByAffinity(
-    students: StudentRow[],
-    teamSize: number,
-    favoriteProjectByStudent: Map<string, string>,
-  ): StudentRow[][] {
-    const sorted = [...students].sort((a, b) =>
-      favoriteProjectByStudent.get(a.id)! < favoriteProjectByStudent.get(b.id)! ? -1 : 1,
-    );
-    const chunks: StudentRow[][] = [];
-    for (let i = 0; i < sorted.length; i += teamSize) {
-      chunks.push(sorted.slice(i, i + teamSize));
-    }
-    return chunks;
+    const { data, error } = await query;
+    if (error) throw error;
+    return data as StudentRow[];
   }
 
-  // Mode équilibré : round-robin par groupe (promo + spécialité).
-  // On distribue un étudiant de chaque groupe dans le bucket le moins rempli,
-  // en commençant par les groupes les plus grands pour maximiser la diversité.
-  private chunkByBalance(students: StudentRow[], teamSize: number): StudentRow[][] {
-    // Regroupement par profil (promo + spécialité)
-    const studentsByProfile = new Map<string, StudentRow[]>();
-    for (const student of students) {
-      const profileKey = `${student.promo ?? '?'}__${student.specialty ?? '?'}`;
-      const group = studentsByProfile.get(profileKey) ?? [];
-      group.push(student);
-      studentsByProfile.set(profileKey, group);
+  /** Construit la table des préférences : tops (pondérés par rang) puis likes. */
+  private async loadPreferences(studentIds: string[]): Promise<Preferences> {
+    const [tops, likes] = await Promise.all([
+      this.supabase.db.from('user_top_projects').select('user_id, project_id, rank').in('user_id', studentIds),
+      this.supabase.db.from('votes').select('user_id, project_id').in('user_id', studentIds),
+    ]);
+
+    const prefs: Preferences = new Map(studentIds.map((id) => [id, new Map()]));
+
+    for (const { user_id, project_id, rank } of tops.data ?? []) {
+      prefs.get(user_id)!.set(project_id, RANK_SCORE[rank] ?? 1);
+    }
+    for (const { user_id, project_id } of likes.data ?? []) {
+      const p = prefs.get(user_id)!;
+      if (!p.has(project_id)) p.set(project_id, LIKE_SCORE);
     }
 
-    // Création des buckets (un bucket = une future équipe)
-    const numberOfTeams = Math.max(1, Math.ceil(students.length / teamSize));
-    const teamBuckets: StudentRow[][] = Array.from({ length: numberOfTeams }, () => []);
+    return prefs;
+  }
 
-    // Tri : les groupes les plus peuplés sont distribués en premier
-    const sortedGroups = [...studentsByProfile.values()]
-      .sort((a, b) => b.length - a.length)
-      .map((group) => [...group]); // copie pour éviter de muter l'original
+  /** Affinité moyenne d'un étudiant avec ses coéquipiers (projets en commun). */
+  private affinityScore(student: StudentRow, team: StudentRow[], prefs: Preferences): number {
+    const mine = prefs.get(student.id)!;
+    const teammates = team.filter((t) => t.id !== student.id);
+    if (teammates.length === 0) return 0;
 
-    // Round-robin : tant qu'il reste des étudiants à placer,
-    // on prend un étudiant de chaque groupe et on le met dans le bucket le moins rempli
-    let hasRemainingStudents = true;
-    while (hasRemainingStudents) {
-      hasRemainingStudents = false;
-      for (const group of sortedGroups) {
-        if (group.length === 0) continue;
-        hasRemainingStudents = true;
-        const smallestBucket = teamBuckets.reduce((min, bucket) =>
-          bucket.length < min.length ? bucket : min, teamBuckets[0],
-        );
-        smallestBucket.push(group.shift()!);
+    const total = teammates.reduce((sum, t) => {
+      const theirs = prefs.get(t.id)!;
+      let shared = 0;
+      for (const [projectId, value] of mine) {
+        const theirValue = theirs.get(projectId);
+        if (theirValue !== undefined) shared += value + theirValue;
+      }
+      return sum + shared;
+    }, 0);
+
+    return Math.round((total / teammates.length) * 10) / 10;
+  }
+
+  /** Projet préféré (score le plus élevé), ou null si aucune préférence. */
+  private topPreference(prefs: Map<string, number>): string | null {
+    let best: string | null = null;
+    let bestValue = -Infinity;
+    for (const [projectId, value] of prefs) {
+      if (value > bestValue) { bestValue = value; best = projectId; }
+    }
+    return best;
+  }
+
+  /** Regroupe les étudiants partageant le même projet préféré (sans préférence => en fin). */
+  private chunkByAffinity(students: StudentRow[], teamSize: number, prefs: Preferences): StudentRow[][] {
+    const key = new Map(students.map((s) => [s.id, this.topPreference(prefs.get(s.id)!) ?? `~${s.id}`]));
+    const sorted = [...students].sort((a, b) => {
+      const ka = key.get(a.id)!, kb = key.get(b.id)!;
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+    return this.chunk(sorted, teamSize);
+  }
+
+  /** Répartit les profils (promo + spécialité) de façon équilibrée entre les équipes. */
+  private chunkByBalance(students: StudentRow[], teamSize: number): StudentRow[][] {
+    const byProfile = new Map<string, StudentRow[]>();
+    for (const s of students) {
+      const key = `${s.promo ?? '?'}__${s.specialty ?? '?'}`;
+      const group = byProfile.get(key) ?? [];
+      group.push(s);
+      byProfile.set(key, group);
+    }
+
+    const teamCount = Math.max(1, Math.ceil(students.length / teamSize));
+    const buckets: StudentRow[][] = Array.from({ length: teamCount }, () => []);
+
+    // Distribue les plus gros profils d'abord, chacun vers l'équipe la moins remplie.
+    const groups = [...byProfile.values()].sort((a, b) => b.length - a.length).map((g) => [...g]);
+    for (let placed = true; placed; ) {
+      placed = false;
+      for (const group of groups) {
+        const student = group.shift();
+        if (!student) continue;
+        placed = true;
+        buckets.reduce((min, b) => b.length < min.length ? b : min).push(student);
       }
     }
 
-    return teamBuckets.filter((bucket) => bucket.length > 0);
+    return buckets.filter((b) => b.length > 0);
   }
 
-  // Crée une équipe en base et retourne son ID
+  private chunk<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  }
+
   private async createTeamAndReturnId(name: string): Promise<string> {
-    const { data, error } = await this.supabase.db
-      .from('teams').insert({ name }).select('id').single();
+    const { data, error } = await this.supabase.db.from('teams').insert({ name }).select('id').single();
     if (error) throw error;
     return data.id;
   }
