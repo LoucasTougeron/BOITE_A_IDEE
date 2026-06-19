@@ -71,11 +71,9 @@ export class ProjectsService {
     if (error) throw error;
 
     await this.rewardsService.incrementUserPoints(userId, 15);
+    await this.scoringService.scoreAndUpdate(data);
 
-    // Fire-and-forget: score the project without blocking the response
-    this.scoringService.scoreAndUpdate(data).catch(() => {});
-
-    return data;
+    return this.findOne(data.id);
   }
 
   async update(id: string, dto: Partial<CreateProjectDto>, user: any) {
@@ -104,10 +102,9 @@ export class ProjectsService {
       .single();
     if (error) throw error;
 
-    // Fire-and-forget: re-score after content change
-    this.scoringService.scoreAndUpdate(data).catch(() => {});
+    await this.scoringService.scoreAndUpdate(data);
 
-    return data;
+    return this.findOne(id);
   }
 
   async remove(id: string, user?: any) {

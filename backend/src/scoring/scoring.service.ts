@@ -4,7 +4,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 interface ScoreResult {
   ai_score: number;
-  completeness_score: number;
   score_reasoning: string;
   final_score: number;
 }
@@ -18,27 +17,6 @@ export class ScoringService {
     const apiKey = process.env.GEMINI_API_KEY;
     this.genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
     if (!apiKey) this.logger.warn('GEMINI_API_KEY not set — AI scoring disabled');
-  }
-
-  computeCompletenessScore(project: any): number {
-    let score = 0;
-    if ((project.description ?? '').length > 50) score += 20;
-    if ((project.objective ?? '').length > 30) score += 20;
-    const tagCount = (project.tags ?? []).length;
-    if (tagCount >= 1) score += 20;
-    if (tagCount >= 3) score += 10;
-    if (project.link) score += 15;
-    if (project.specialty) score += 15;
-    return Math.min(100, score);
-  }
-
-  computeVoteScore(voteCount: number): number {
-    return Math.min(100, Math.round((voteCount / 20) * 100));
-  }
-
-  computeFinalScore(aiScore: number, completenessScore: number, voteCount: number): number {
-    const voteScore = this.computeVoteScore(voteCount);
-    return Math.round(0.45 * aiScore + 0.35 * voteScore + 0.20 * completenessScore);
   }
 
   private async callGemini(project: any): Promise<{ score: number; reasoning: string }> {
@@ -79,8 +57,6 @@ Critères :
   }
 
   async scoreProject(project: any): Promise<ScoreResult> {
-    const completenessScore = this.computeCompletenessScore(project);
-
     let aiScore = 50;
     let reasoning = 'Score par défaut.';
 
@@ -92,10 +68,7 @@ Critères :
       this.logger.error(`Gemini scoring failed for project ${project.id}: ${err}`);
     }
 
-    const voteCount = project.votes?.[0]?.count ?? 0;
-    const finalScore = this.computeFinalScore(aiScore, completenessScore, voteCount);
-
-    return { ai_score: aiScore, completeness_score: completenessScore, score_reasoning: reasoning, final_score: finalScore };
+    return { ai_score: aiScore, score_reasoning: reasoning, final_score: aiScore };
   }
 
   async scoreAndUpdate(project: any): Promise<void> {
@@ -105,7 +78,6 @@ Critères :
         .from('projects')
         .update({
           ai_score: scores.ai_score,
-          completeness_score: scores.completeness_score,
           score_reasoning: scores.score_reasoning,
           score_updated_at: new Date().toISOString(),
         })
@@ -117,12 +89,9 @@ Critères :
   }
 
   enrichWithFinalScore(project: any): any {
-    const aiScore = project.ai_score ?? 0;
-    const completenessScore = project.completeness_score ?? 0;
-    const voteCount = project.votes?.[0]?.count ?? 0;
     return {
       ...project,
-      final_score: this.computeFinalScore(aiScore, completenessScore, voteCount),
+      final_score: project.ai_score ?? 0,
     };
   }
 }

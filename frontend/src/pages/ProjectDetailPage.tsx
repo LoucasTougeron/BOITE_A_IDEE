@@ -207,12 +207,12 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            {project.final_score != null && (
+            {project.ai_score != null && (
               <div className="glass-card-static p-4 sm:p-5">
                 <p className="text-xs text-[var(--text-muted)] mb-3 font-bold uppercase tracking-widest flex items-center gap-1.5">
                   <Sparkles size={12} /> Score IA
                 </p>
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-4">
                   <div className="relative w-14 h-14 shrink-0">
                     <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                       <circle cx="18" cy="18" r="15" fill="none" stroke="var(--border-light)" strokeWidth="3" />
@@ -220,7 +220,7 @@ export default function ProjectDetailPage() {
                         cx="18" cy="18" r="15" fill="none"
                         stroke="url(#scoreGrad)" strokeWidth="3"
                         strokeLinecap="round"
-                        strokeDasharray={`${(project.final_score / 100) * 94.2} 94.2`}
+                        strokeDasharray={`${(project.ai_score / 100) * 94.2} 94.2`}
                       />
                       <defs>
                         <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -230,37 +230,15 @@ export default function ProjectDetailPage() {
                       </defs>
                     </svg>
                     <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-[var(--text-primary)]">
-                      {project.final_score}
+                      {project.ai_score}
                     </span>
                   </div>
-                  <div className="flex-1 space-y-1.5 text-xs">
-                    {project.ai_score != null && (
-                      <div>
-                        <div className="flex justify-between text-[var(--text-muted)] mb-0.5">
-                          <span>Qualité IA</span><span>{Math.round(project.ai_score)}</span>
-                        </div>
-                        <div className="h-1 rounded-full bg-[var(--border-light)]">
-                          <div className="h-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: `${project.ai_score}%` }} />
-                        </div>
-                      </div>
-                    )}
-                    {project.completeness_score != null && (
-                      <div>
-                        <div className="flex justify-between text-[var(--text-muted)] mb-0.5">
-                          <span>Complétude</span><span>{Math.round(project.completeness_score)}</span>
-                        </div>
-                        <div className="h-1 rounded-full bg-[var(--border-light)]">
-                          <div className="h-1 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${project.completeness_score}%` }} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {project.score_reasoning && (
+                    <p className="text-xs text-[var(--text-muted)] leading-relaxed italic flex-1">
+                      {project.score_reasoning}
+                    </p>
+                  )}
                 </div>
-                {project.score_reasoning && (
-                  <p className="text-xs text-[var(--text-muted)] leading-relaxed italic border-t border-[var(--border-light)] pt-3">
-                    {project.score_reasoning}
-                  </p>
-                )}
               </div>
             )}
 
