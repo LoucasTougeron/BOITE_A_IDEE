@@ -4,28 +4,21 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient } from '@supabase/supabase-js';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private config: ConfigService) {}
+  constructor(private supabase: SupabaseService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractToken(request);
     if (!token) throw new UnauthorizedException();
 
-    const supabase = createClient(
-      this.config.getOrThrow<string>('SUPABASE_URL'),
-      this.config.getOrThrow<string>('SUPABASE_SERVICE_KEY'),
-    );
-
-    const { data, error } = await supabase.auth.getUser(token);
+    const { data, error } = await this.supabase.db.auth.getUser(token);
     if (error || !data.user) throw new UnauthorizedException();
 
-    // Fetch the public.users profile to get the real role
-    const { data: profile } = await supabase
+    const { data: profile } = await this.supabase.db
       .from('users')
       .select('role')
       .eq('id', data.user.id)
@@ -33,7 +26,7 @@ export class AuthGuard implements CanActivate {
 
     request.user = {
       ...data.user,
-      role: profile?.role || 'user',
+      role: profile?.role ?? 'user',
     };
     return true;
   }

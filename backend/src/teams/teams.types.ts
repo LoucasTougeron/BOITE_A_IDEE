@@ -1,0 +1,33 @@
+export interface TeamMember {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  promo?: string;
+  specialty?: string;
+  affinityScore: number;
+}
+
+export interface ProposedTeam {
+  name: string;
+  members: TeamMember[];
+}
+
+export interface AutoGenerateResult {
+  teams: ProposedTeam[];
+  stats: {
+    totalStudents: number;
+    studentsWithPreferences: number;
+    studentsWithoutPreferences: number;
+    mode: 'affinity' | 'balanced';
+  };
+}
+
+export interface StudentRow {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  promo?: string;
+  specialty?: string;
+}

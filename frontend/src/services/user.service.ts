@@ -20,7 +20,7 @@ export const userService = {
 
   async changePassword(password: string): Promise<void> {
     const { error } = await supabase.auth.updateUser({ password });
-    if (error) throw error;
+    if (error) throw new Error(error.message);
   },
 
   getAll(): Promise<Profile[]> {

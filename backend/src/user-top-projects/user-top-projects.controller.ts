@@ -2,32 +2,34 @@ import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/comm
 import { AuthGuard } from '../auth/auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { SaveTopProjectsDto } from './dto/save-top-projects.dto';
 import { UserTopProjectsService } from './user-top-projects.service';
 
 @Controller('user-top-projects')
+@UseGuards(AuthGuard)
 export class UserTopProjectsController {
   constructor(private readonly service: UserTopProjectsService) {}
 
   @Get('me')
-  @UseGuards(AuthGuard)
   getMyTopProjects(@Req() req: any) {
     return this.service.getMyTopProjects(req.user.id);
   }
 
   @Post('me')
-  @UseGuards(AuthGuard)
-  saveMyTopProjects(@Body() body: { rankings: { project_id: string; rank: number }[] }, @Req() req: any) {
-    return this.service.saveMyTopProjects(req.user.id, body.rankings);
+  saveMyTopProjects(@Body() dto: SaveTopProjectsDto, @Req() req: any) {
+    return this.service.saveMyTopProjects(req.user.id, dto.rankings);
   }
 
   @Get('stats')
-  @UseGuards(AuthGuard)
+  @Roles('admin')
+  @UseGuards(RolesGuard)
   getStats(@Query('team_id') teamId?: string) {
     return this.service.getStats(teamId);
   }
 
   @Get('stats/teams')
-  @UseGuards(AuthGuard)
+  @Roles('admin')
+  @UseGuards(RolesGuard)
   getTeamStats() {
     return this.service.getTeamStats();
   }

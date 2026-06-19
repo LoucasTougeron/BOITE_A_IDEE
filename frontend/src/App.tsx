@@ -18,16 +18,16 @@ import TopProjectsPage from './pages/TopProjectsPage';
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <LoadingState fullPage />;
-  if (!user) return <Navigate to="/login" replace />;
+  const { profile, loading } = useAuth();
+  if (loading) return <LoadingState />;
+  if (!profile) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return <LoadingState fullPage />;
-  if (user) return <Navigate to="/" replace />;
+  const { profile, loading } = useAuth();
+  if (loading) return <LoadingState />;
+  if (profile) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 

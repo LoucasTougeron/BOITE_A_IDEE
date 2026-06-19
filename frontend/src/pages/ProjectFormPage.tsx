@@ -8,6 +8,7 @@ import Card from '../components/ui/Card';
 import InputField from '../components/ui/InputField';
 import SelectField from '../components/ui/SelectField';
 import TextareaField from '../components/ui/TextareaField';
+import { useAuth } from '../hooks/useAuth';
 import { projectService, type ProjectPayload } from '../services/project.service';
 import { storageService } from '../services/storage.service';
 
@@ -39,18 +40,28 @@ const DEFAULT_FORM: FormState = {
 export default function ProjectFormPage() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const { profile, isAdmin } = useAuth();
   const isEdit = !!id;
 
   const [form, setForm] = useState<FormState>(DEFAULT_FORM);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
-  const { data: existing } = useQuery({
+  const { data: existing, isLoading: isLoadingProject } = useQuery({
     queryKey: ['project', id],
     queryFn: () => projectService.getById(id!),
     enabled: isEdit,
   });
+
+  useEffect(() => {
+    if (!isEdit || !existing || isLoadingProject) return;
+    const isOwner = existing.creator_id === profile?.id;
+    if (!isOwner && !isAdmin) {
+      navigate(`/projects/${id}`, { replace: true });
+    }
+  }, [existing, isLoadingProject, profile, isAdmin, isEdit, id, navigate]);
 
   useEffect(() => {
     if (existing) {
@@ -67,8 +78,11 @@ export default function ProjectFormPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setUploadError('');
+    setSubmitted(true);
 
-    let fileUrl = form.file_url;
+    if (!form.title || !form.description || !form.objective) return;
+
+    let fileUrl = form.file_url || undefined;
 
     if (file) {
       setUploading(true);
@@ -82,11 +96,21 @@ export default function ProjectFormPage() {
       setUploading(false);
     }
 
-    mutation.mutate({
-      ...form,
-      file_url: fileUrl,
+    // Only send optional fields if they have a value — avoid sending empty strings
+    const payload: ProjectPayload = {
+      title: form.title,
+      description: form.description,
+      objective: form.objective,
+      theme: form.theme,
       tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
-    });
+      status: form.status,
+      ...(form.link && { link: form.link }),
+      ...(fileUrl && { file_url: fileUrl }),
+      ...(form.team_name && { team_name: form.team_name }),
+      ...(form.specialty && { specialty: form.specialty }),
+    };
+
+    mutation.mutate(payload);
   }
 
   const set = (field: keyof FormState) => (value: string) =>
@@ -117,6 +141,7 @@ export default function ProjectFormPage() {
                     value={form.title}
                     onChange={set('title')}
                     required
+                    error={submitted && !form.title}
                   />
                   <TextareaField
                     label="Description"
@@ -125,6 +150,7 @@ export default function ProjectFormPage() {
                     onChange={set('description')}
                     rows={3}
                     required
+                    error={submitted && !form.description}
                   />
                   <TextareaField
                     label="Objectif"
@@ -133,6 +159,7 @@ export default function ProjectFormPage() {
                     onChange={set('objective')}
                     rows={3}
                     required
+                    error={submitted && !form.objective}
                   />
                 </div>
               </Card>
@@ -168,44 +195,44 @@ export default function ProjectFormPage() {
             <div className="space-y-4">
               <Card title="Informations">
                 <div className="space-y-4">
-                <SelectField
-                  label="Statut"
-                  value={form.status}
-                  options={STATUSES}
-                  onChange={(v) => setForm((f) => ({ ...f, status: v }))}
-                />
-                <InputField
-                  label="Nom de l'équipe"
-                  placeholder="ex: Team Alpha"
-                  value={form.team_name}
-                  onChange={set('team_name')}
-                />
-                <InputField
-                  label="Lien livrable"
-                  type="url"
-                  placeholder="https://..."
-                  value={form.link}
-                  onChange={set('link')}
-                />
-                <div className="flex flex-col gap-1.5">
-                  <label className="block text-xs font-semibold text-[var(--text-secondary)] tracking-wide uppercase">
-                    Fichier PDF <span className="font-normal text-[var(--text-muted)] normal-case">(Optionnel)</span>
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="w-full text-sm text-[var(--text-muted)] file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-purple-500/10 file:to-pink-500/10 file:text-[var(--accent-2)] hover:file:from-purple-500/20 hover:file:to-pink-500/20 transition file:transition-colors file:cursor-pointer"
+                  <SelectField
+                    label="Statut"
+                    value={form.status}
+                    options={STATUSES}
+                    onChange={(v) => setForm((f) => ({ ...f, status: v }))}
                   />
-                  {form.file_url && !file && (
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      Un fichier est déjà joint.{' '}
-                      <a href={form.file_url} target="_blank" rel="noreferrer" className="font-semibold gradient-text hover:opacity-80 transition-opacity">
-                        Voir le fichier
-                      </a>
-                    </p>
-                  )}
-                </div>
+                  <InputField
+                    label="Nom de l'équipe"
+                    placeholder="ex: Team Alpha"
+                    value={form.team_name}
+                    onChange={set('team_name')}
+                  />
+                  <InputField
+                    label="Lien livrable"
+                    type="url"
+                    placeholder="https://..."
+                    value={form.link}
+                    onChange={set('link')}
+                  />
+                  <div className="flex flex-col gap-1.5">
+                    <label className="block text-xs font-semibold text-[var(--text-secondary)] tracking-wide uppercase">
+                      Fichier PDF <span className="font-normal text-[var(--text-muted)] normal-case">(Optionnel)</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => setFile(e.target.files?.[0] || null)}
+                      className="w-full text-sm text-[var(--text-muted)] file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gradient-to-r file:from-purple-500/10 file:to-pink-500/10 file:text-[var(--accent-2)] hover:file:from-purple-500/20 hover:file:to-pink-500/20 transition file:transition-colors file:cursor-pointer"
+                    />
+                    {form.file_url && !file && (
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Un fichier est déjà joint.{' '}
+                        <a href={form.file_url} target="_blank" rel="noreferrer" className="font-semibold gradient-text hover:opacity-80 transition-opacity">
+                          Voir le fichier
+                        </a>
+                      </p>
+                    )}
+                  </div>
                 </div>
               </Card>
 

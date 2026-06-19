@@ -107,15 +107,18 @@ export class ProjectsService {
     return this.findOne(id);
   }
 
-  async remove(id: string, user?: any) {
+  async remove(id: string, user: any) {
     const { data: project } = await this.supabase.db
       .from('projects')
       .select('creator_id')
       .eq('id', id)
       .single();
 
-    if (project) {
-      const creatorId = project.creator_id;
+    if (!project) throw new NotFoundException();
+    if (project.creator_id !== user.id && user.role !== 'admin') throw new ForbiddenException();
+
+    const creatorId = project.creator_id;
+    {
 
       const { data: votes } = await this.supabase.db
         .from('votes')
