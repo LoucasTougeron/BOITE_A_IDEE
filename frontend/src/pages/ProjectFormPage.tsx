@@ -47,6 +47,7 @@ export default function ProjectFormPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   const { data: existing, isLoading: isLoadingProject } = useQuery({
     queryKey: ['project', id],
@@ -77,6 +78,9 @@ export default function ProjectFormPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setUploadError('');
+    setSubmitted(true);
+
+    if (!form.title || !form.description || !form.objective) return;
 
     let fileUrl = form.file_url || undefined;
 
@@ -137,6 +141,7 @@ export default function ProjectFormPage() {
                     value={form.title}
                     onChange={set('title')}
                     required
+                    error={submitted && !form.title}
                   />
                   <TextareaField
                     label="Description"
@@ -145,6 +150,7 @@ export default function ProjectFormPage() {
                     onChange={set('description')}
                     rows={3}
                     required
+                    error={submitted && !form.description}
                   />
                   <TextareaField
                     label="Objectif"
@@ -153,6 +159,7 @@ export default function ProjectFormPage() {
                     onChange={set('objective')}
                     rows={3}
                     required
+                    error={submitted && !form.objective}
                   />
                 </div>
               </Card>

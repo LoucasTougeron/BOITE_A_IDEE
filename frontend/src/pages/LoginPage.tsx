@@ -83,7 +83,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-56px)] flex page-enter">
+    <div className="min-h-screen flex page-enter">
       {/* Left panel */}
       <div ref={leftRef} className="hidden lg:flex flex-col justify-between w-[520px] shrink-0 relative overflow-hidden p-12">
         <div className="absolute inset-0 bg-gradient-to-br from-purple-700 via-purple-600 to-pink-600" />
@@ -96,9 +96,11 @@ export default function LoginPage() {
           <div className="flex items-center gap-2 text-white/70 text-sm font-medium mb-16">
             <Lightbulb size={16} /> Sup de Vinci
           </div>
-          <h1 className="text-5xl font-bold leading-tight mb-4 text-white" style={{ fontFamily: 'var(--font-display)', letterSpacing: '-0.03em' }}>
-            La Boîte à Idées<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-pink-200">de votre école</span>
+          <h1 className="text-5xl font-bold leading-tight mb-4">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-pink-200">
+              La Boîte à Idées<br />
+              de votre école
+            </span>
           </h1>
           <p className="text-white/70 text-lg leading-relaxed max-w-md">
             Centralisez, explorez et votez pour les projets étudiants les plus innovants.
@@ -119,7 +121,7 @@ export default function LoginPage() {
           ))}
         </div>
 
-        <p className="relative z-10 text-white/40 text-xs">© 2025 BAD — Boîte à Idées</p>
+        <p className="relative z-10 text-white/40 text-xs">© 2026 BAD — Boîte à Idées</p>
       </div>
 
       {/* Right panel */}

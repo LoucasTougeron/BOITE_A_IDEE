@@ -7,6 +7,7 @@ interface TextareaFieldProps {
   rows?: number;
   required?: boolean;
   disabled?: boolean;
+  error?: boolean;
 }
 
 export default function TextareaField({
@@ -18,12 +19,13 @@ export default function TextareaField({
   rows = 4,
   required = false,
   disabled = false,
+  error = false,
 }: TextareaFieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="block text-xs font-semibold text-[var(--text-secondary)] tracking-wide uppercase">
+      <label className="block text-xs font-semibold tracking-wide uppercase" style={{ color: error ? 'var(--error, #ef4444)' : 'var(--text-secondary)' }}>
         {label}
-        {required && <span style={{ color: 'var(--accent-2)' }}> *</span>}
+        {required && <span style={{ color: error ? 'var(--error, #ef4444)' : 'var(--accent-2)' }}> *</span>}
         {hint && (
           <span className="ml-1 font-normal text-[var(--text-muted)] normal-case tracking-normal">
             {hint}
@@ -35,9 +37,12 @@ export default function TextareaField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
-        required={required}
         disabled={disabled}
         className="input-modern resize-none"
+        style={{
+          borderColor: error ? 'var(--error, #ef4444)' : undefined,
+          boxShadow: error ? '0 0 0 3px rgba(239, 68, 68, 0.15)' : undefined,
+        }}
       />
     </div>
   );
