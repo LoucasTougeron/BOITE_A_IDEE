@@ -11,9 +11,9 @@ import { ScoringService } from '../scoring/scoring.service';
 @Injectable()
 export class ProjectsService {
   constructor(
-    private supabase: SupabaseService,
-    private rewardsService: RewardsService,
-    private scoringService: ScoringService,
+    private readonly supabase: SupabaseService,
+    private readonly rewardsService: RewardsService,
+    private readonly scoringService: ScoringService,
   ) {}
 
   async findAll(query: Record<string, string>) {
@@ -89,6 +89,12 @@ export class ProjectsService {
     delete updatePayload.created_at;
     delete updatePayload.updated_at;
     delete updatePayload.votes;
+    delete updatePayload.dislikes;
+    delete updatePayload.ai_score;
+    delete updatePayload.completeness_score;
+    delete updatePayload.score_reasoning;
+    delete updatePayload.score_updated_at;
+    delete updatePayload.final_score;
 
     const { data, error } = await this.supabase.db
       .from('projects')
